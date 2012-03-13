@@ -1,0 +1,2 @@
+libmcrypt	4	libmcrypt4 (>= 2.4.22-1)
+libmhash	2	libmhash2 (>= 0.8.15-1)

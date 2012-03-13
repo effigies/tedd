@@ -1,0 +1,16 @@
+		INSTALLATION for mcrypt
+
+If compilation fails because of gettext (nls code), use the --disable-nls,
+if you want to disable internationalization, or --with-included-gettext, if
+you want to enable it, as a parameter to configure script. On IRIX 6.4
+there is a problem with the nls code, so use --disable-nls.
+
+If you're installing with nls support, follow the instructions in ABOUT-NLS
+file. Briefly put in the environment parameter LINGUAS the
+characters which identify your country's language according to iso639 
+(eg. "el" for greek language).
+
+
+                                                         Nikos
+
+

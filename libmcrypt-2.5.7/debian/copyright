@@ -1,0 +1,45 @@
+Author: Nikos Mavroyanopoulos <nmav@hellug.gr>.
+
+The author says in the README file:
+Look at COPYING for license information and the individual files for more
+information. COPYING applies only for the mcrypt program and not the
+algorithms which most of them are public domain.
+
+And the attached COPYING.LIB is the GNU Library General Public License, so
+this software is released under the terms of the GNU Library General Public
+License.
+
+In the headers of the source files he says:
+/*
+ * Copyright (C) 1998,1999,2001 Nikos Mavroyanopoulos
+ *
+ * This library is free software; you can redistribute it and/or modify it under the terms of the
+ * GNU Library General Public License as published by the Free Software
+ * Foundation; either version 2 of the License, or (at your option) any
+ * later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * Boston, MA 02111-1307, USA.
+ */
+
+On Debian systems, the complete text of the GNU Library General Public License
+can be found in /usr/share/common-licenses/LGPL.
+
+Debian packaging:
+It was put together by Raphael Bossek <bossekr@debian.org>
+from the following sources:
+
+  ftp://mcrypt.hellug.gr/pub/mcrypt/libmcrypt
+
+Changes:
+  * Added Debian GNU/Linux packaging files.
+
+The actual project page for the upstream is http://mcrypt.sourceforge.net/.
+The actual maintainer of the package is RISKO Gergely <risko@debian.org>.

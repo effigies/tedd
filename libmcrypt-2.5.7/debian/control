@@ -1,0 +1,46 @@
+Source: libmcrypt
+Section: libs
+Priority: optional
+Maintainer: Ubuntu MOTU Developers <ubuntu-motu@lists.ubuntu.com>
+XSBC-Original-Maintainer: RISKO Gergely <risko@debian.org>
+Build-Depends: libltdl3-dev, debhelper (>= 4)
+Standards-Version: 3.6.1.1
+
+Package: libmcrypt4
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}
+Suggests: libmcrypt-dev, mcrypt
+Description: De-/Encryption Library
+ libmcrypt is the library which implements all the algorithms and
+ modes found in mcrypt.
+ .
+ libmcrypt supports the algorithms: BLOWFISH, TWOFISH, DES, TripleDES,
+ 3-WAY, SAFER-sk64, SAFER-sk128, SAFER+, LOKI97, GOST, RC2, RC6, MARS,
+ IDEA, RIJNDAEL-128, RIJNDAEL-192, SERPENT, RIJNDAEL-256, CAST-128
+ (known as CAST5), CAST-256, ARCFOUR, ENIGMA, PANAMA, XTEA and WAKE.
+ Block algorithms can be used in: CBC, ECB, CFB and OFB (8 bit and n
+ bit, where n is the size of the algorithm's block length).
+ .
+ More information can be found at the libmcrypt homepage
+ http://mcrypt.sourceforge.net/ .
+
+Package: libmcrypt-dev
+Section: libdevel
+Architecture: any
+Depends: libmcrypt4 (= ${binary:Version}), libltdl3-dev
+Replaces: libmcrypt4 (<< 2.5.7-2)
+Description: De-/Encryption Library development files
+ libmcrypt is the library which implements all the algorithms and
+ modes found in mcrypt.
+ .
+ libmcrypt supports the algorithms: BLOWFISH, TWOFISH, DES, TripleDES,
+ 3-WAY, SAFER-sk64, SAFER-sk128, SAFER+, LOKI97, GOST, RC2, RC6, MARS,
+ IDEA, RIJNDAEL-128, RIJNDAEL-192, SERPENT, RIJNDAEL-256, CAST-128
+ (known as CAST5), CAST-256, ARCFOUR, ENIGMA, PANAMA, XTEA and WAKE.
+ Block algorithms can be used in: CBC, ECB, CFB and OFB (8 bit and n
+ bit, where n is the size of the algorithm's block length).
+ .
+ More information can be found at the libmcrypt homepage
+ http://mcrypt.sourceforge.net/ .
+

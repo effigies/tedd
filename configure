@@ -1,0 +1,14 @@
+#!/bin/bash
+pushd libmcrypt-2.5.7/
+./configure --enable-static
+popd
+pushd mhash-0.9.9/
+./configure --enable-static
+popd
+pushd mcrypt-2.6.4/
+./configure --enable-static
+popd
+pushd xfsprogs-2.9.8
+./configure --enable-shared=no
+popd
+

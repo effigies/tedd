@@ -1,0 +1,64 @@
+AC_INIT(include/libxfs.h)
+AC_CONFIG_HEADER(include/platform_defs.h)
+
+AC_ARG_ENABLE(shared,
+[ --enable-shared=[yes/no] Enable use of shared libraries [default=yes]],,
+	enable_shared=yes)
+AC_SUBST(enable_shared)
+
+AC_ARG_ENABLE(gettext,
+[ --enable-gettext=[yes/no] Enable alternate language support [default=yes]],,
+	enable_gettext=yes)
+AC_SUBST(enable_gettext)
+
+AC_ARG_ENABLE(readline,
+[ --enable-readline=[yes/no] Enable readline command editing [default=no]],
+	test $enable_readline = yes && libreadline="-lreadline",
+	enable_readline=no)
+AC_SUBST(libreadline)
+AC_SUBST(enable_readline)
+
+AC_ARG_ENABLE(editline,
+[ --enable-editline=[yes/no] Enable editline command editing [default=no]],
+	test $enable_editline = yes && libeditline="-ledit",
+	enable_editline=no)
+AC_SUBST(libeditline)
+AC_SUBST(enable_editline)
+
+AC_ARG_ENABLE(termcap,
+[ --enable-termcap=[yes/no] Enable terminal capabilities library [default=no]],
+	test $enable_termcap = yes && libtermcap="-ltermcap",)
+AC_SUBST(libtermcap)
+
+AC_ARG_ENABLE(lib64,
+[ --enable-lib64=[yes/no] Enable lib64 support [default=no]],,
+	enable_lib64=no)
+AC_SUBST(enable_lib64)
+
+AC_PACKAGE_GLOBALS(xfsprogs)
+AC_PACKAGE_UTILITIES(xfsprogs)
+AC_MULTILIB($enable_lib64)
+
+AC_PACKAGE_NEED_AIO_H
+AC_PACKAGE_NEED_LIO_LISTIO
+
+AC_PACKAGE_NEED_UUID_H
+AC_PACKAGE_NEED_UUIDCOMPARE
+
+AC_PACKAGE_NEED_PTHREAD_H
+AC_PACKAGE_NEED_PTHREADMUTEXINIT
+
+AC_HAVE_FADVISE
+AC_HAVE_MADVISE
+AC_HAVE_MINCORE
+AC_HAVE_SENDFILE
+AC_HAVE_GETMNTENT
+AC_HAVE_GETMNTINFO
+
+AC_TYPE_PSINT
+AC_TYPE_PSUNSIGNED
+AC_TYPE_U32
+AC_SIZEOF_POINTERS_AND_LONG
+AC_MANUAL_FORMAT
+
+AC_OUTPUT(include/builddefs)

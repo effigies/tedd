@@ -1,0 +1,16 @@
+This is the Debian GNU/Linux packaged version of mcrypt version 2.5.3.
+
+The developer of this software is Nikos Mavroyanopoulos <nmav@hellug.gr>.
+
+It was put together by Raphael Bossek <bossekr@debian.org>
+from the following sources:
+
+  http://mcrypt.hellug.gr/mcrypt
+
+Changes:
+  * Added Debian GNU/Linux packaging files.
+
+This software is released under the terms of the GNU General Public License.
+
+On Debian systems, the complete text of the GNU General Public License
+can be found in /usr/share/common-licenses/GPL.
