@@ -18,13 +18,13 @@ mhash:
 	make -C mhash-0.9.9/
 
 mcrypt: libmcrypt mhash
-	make -C mcrypt-2.6.4/
+	make -C mcrypt-2.6.8/
 	gcc -static -fno-stack-protector -I /usr/local/include -Wall -o \
-tedd-utils/mcrypt mcrypt-2.6.4/src/extra.o mcrypt-2.6.4/src/mcrypt.o mcrypt-2.6.4/src/keys.o mcrypt-2.6.4/src/random.o \
-mcrypt-2.6.4/src/rndunix.o mcrypt-2.6.4/src/xmalloc.o mcrypt-2.6.4/src/functions.o mcrypt-2.6.4/src/errors.o \
-mcrypt-2.6.4/src/bits.o mcrypt-2.6.4/src/openpgp.o mcrypt-2.6.4/src/rndwin32.o mcrypt-2.6.4/src/environ.o \
-mcrypt-2.6.4/src/getpass.o mcrypt-2.6.4/src/ufc_crypt.o mcrypt-2.6.4/src/popen.o mcrypt-2.6.4/src/classic.o \
-mcrypt-2.6.4/src/rfc2440.o mcrypt-2.6.4/src/gaaout.o -lz libmcrypt-2.5.8/lib/.libs/libmcrypt.a \
+tedd-utils/mcrypt mcrypt-2.6.8/src/extra.o mcrypt-2.6.8/src/mcrypt.o mcrypt-2.6.8/src/keys.o mcrypt-2.6.8/src/random.o \
+mcrypt-2.6.8/src/rndunix.o mcrypt-2.6.8/src/xmalloc.o mcrypt-2.6.8/src/functions.o mcrypt-2.6.8/src/errors.o \
+mcrypt-2.6.8/src/bits.o mcrypt-2.6.8/src/openpgp.o mcrypt-2.6.8/src/rndwin32.o mcrypt-2.6.8/src/environ.o \
+mcrypt-2.6.8/src/getpass.o mcrypt-2.6.8/src/ufc_crypt.o mcrypt-2.6.8/src/popen.o mcrypt-2.6.8/src/classic.o \
+mcrypt-2.6.8/src/rfc2440.o mcrypt-2.6.8/src/gaaout.o -lz libmcrypt-2.5.8/lib/.libs/libmcrypt.a \
 -L/usr/local/lib mhash-0.9.9/lib/.libs/libmhash.a
 
 mkfs:
@@ -37,7 +37,7 @@ xfsprogs-2.9.8/libdisk/.libs/libdisk.a -lrt -lpthread
 clean:
 	rm -rf *.tar.gz *.pyc *.bundle *~
 	make -C mhash-0.9.9/ distclean
-	make -C mcrypt-2.6.4/ distclean
+	make -C mcrypt-2.6.8/ distclean
 	make -C libmcrypt-2.5.8/ distclean
 	make -C xfsprogs-2.9.8/ distclean
 	rm tedd-utils/*

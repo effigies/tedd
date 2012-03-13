@@ -5,7 +5,7 @@ popd
 pushd mhash-0.9.9/
 ./configure --enable-static
 popd
-pushd mcrypt-2.6.4/
+pushd mcrypt-2.6.8/
 ./configure --enable-static
 popd
 pushd xfsprogs-2.9.8
