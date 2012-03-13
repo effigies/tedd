@@ -10,7 +10,8 @@ University disagrees with this assessment, please contact me to resolve the
 issue.
 
 The components I developed (in the scripts/ folder) are licensed under the BSD 
-license. mcrypt, and mkfs.xkfs are licensed under the GNU GPL (these are invoked as separate processes and are not linked with the installer).
+license. mcrypt, and mkfs.xkfs are licensed under the GNU GPL (these are
+invoked as separate processes and are not linked with the installer).
 
 While I am making this source available, I am unable to support or maintain it 
 further. I will not accept any maintenance patches, but would invite interested
