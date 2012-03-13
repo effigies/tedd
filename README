@@ -23,6 +23,7 @@ Compilation
 To build TEDD the following dependnecies must be met.
 
 * build-essential
+* libtool
 * automake1.4
 * automake1.7
 * libmcrypt-dev
