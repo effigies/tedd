@@ -38,6 +38,6 @@ clean:
 	rm -rf *.tar.gz *.pyc *.bundle *~
 	make -C mhash-0.9.9/ distclean
 	make -C mcrypt-2.6.8/ distclean
-	make -C libmcrypt-2.5.8/ distclean
 	make -C xfsprogs-3.1.7/ distclean
 	rm tedd-utils/*
+	make -C libmcrypt-2.5.8/ distclean
