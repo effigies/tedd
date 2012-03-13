@@ -28,16 +28,16 @@ mcrypt-2.6.8/src/rfc2440.o mcrypt-2.6.8/src/gaaout.o -lz libmcrypt-2.5.8/lib/.li
 -L/usr/local/lib mhash-0.9.9/lib/.libs/libmhash.a
 
 mkfs:
-	make -C xfsprogs-2.9.8/ DEBUG="-DNDEBUG"
-	gcc -static -o tedd-utils/mkfs.xfs  xfsprogs-2.9.8/mkfs/maxtrres.o \
-xfsprogs-2.9.8/mkfs/proto.o xfsprogs-2.9.8/mkfs/xfs_mkfs.o \
-xfsprogs-2.9.8/libxfs/.libs/libxfs.a -luuid \
-xfsprogs-2.9.8/libdisk/.libs/libdisk.a -lrt -lpthread
+	make -C xfsprogs-3.1.7/ DEBUG="-DNDEBUG"
+	gcc -static -o tedd-utils/mkfs.xfs  xfsprogs-3.1.7/mkfs/maxtrres.o \
+xfsprogs-3.1.7/mkfs/proto.o xfsprogs-3.1.7/mkfs/xfs_mkfs.o \
+xfsprogs-3.1.7/libxfs/.libs/libxfs.a -luuid \
+xfsprogs-3.1.7/libdisk/.libs/libdisk.a -lrt -lpthread
 
 clean:
 	rm -rf *.tar.gz *.pyc *.bundle *~
 	make -C mhash-0.9.9/ distclean
 	make -C mcrypt-2.6.8/ distclean
 	make -C libmcrypt-2.5.8/ distclean
-	make -C xfsprogs-2.9.8/ distclean
+	make -C xfsprogs-3.1.7/ distclean
 	rm tedd-utils/*
