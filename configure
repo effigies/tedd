@@ -1,5 +1,5 @@
 #!/bin/bash
-pushd libmcrypt-2.5.7/
+pushd libmcrypt-2.5.8/
 ./configure --enable-static
 popd
 pushd mhash-0.9.9/
