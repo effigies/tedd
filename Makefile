@@ -1,15 +1,18 @@
-all: utils pythonscripts
+all: pythonscripts
 	cat tedd.sh tedd.tar.gz > tedd.bundle
 	chmod +x tedd.bundle
 
-pythonscripts:
+pythonscripts: utils
 	tar -czf tedd.tar.gz scripts/*.py scripts/distros/*.py tedd-utils.tar.gz
 
 utils: mcrypt mkfs getpass
 	tar -czf tedd-utils.tar.gz -C tedd-utils/ getpass mcrypt mkfs.xfs
 
-getpass:
+getpass: utilsdir
 	gcc -static getpass.c -o tedd-utils/getpass
+
+utilsdir:
+	mkdir -p tedd-utils
 
 libmcrypt:
 	make -C libmcrypt-2.5.8/
@@ -17,7 +20,7 @@ libmcrypt:
 mhash:
 	make -C mhash-0.9.9/
 
-mcrypt: libmcrypt mhash
+mcrypt: libmcrypt mhash utilsdir
 	make -C mcrypt-2.6.8/
 	gcc -static -fno-stack-protector -I /usr/local/include -Wall -o \
 tedd-utils/mcrypt mcrypt-2.6.8/src/extra.o mcrypt-2.6.8/src/mcrypt.o mcrypt-2.6.8/src/keys.o mcrypt-2.6.8/src/random.o \
@@ -27,7 +30,7 @@ mcrypt-2.6.8/src/getpass.o mcrypt-2.6.8/src/ufc_crypt.o mcrypt-2.6.8/src/popen.o
 mcrypt-2.6.8/src/rfc2440.o mcrypt-2.6.8/src/gaaout.o -lz libmcrypt-2.5.8/lib/.libs/libmcrypt.a \
 -L/usr/local/lib mhash-0.9.9/lib/.libs/libmhash.a
 
-mkfs:
+mkfs: utilsdir
 	make -C xfsprogs-3.1.7/ DEBUG="-DNDEBUG"
 	gcc -static -o tedd-utils/mkfs.xfs  xfsprogs-3.1.7/mkfs/maxtrres.o \
 xfsprogs-3.1.7/mkfs/proto.o xfsprogs-3.1.7/mkfs/xfs_mkfs.o \
