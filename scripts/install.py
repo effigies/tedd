@@ -53,7 +53,7 @@ def getPartition(disk):
     elif len(parts) == 1:
         part_prompt = raw_input("\nFound a Linux partition on %s. Is this "\
                                 "correct? [Y/n] " % parts[0].path)
-        if part_prompt != '' or not part_prompt.lower().startswith('y'):
+        if part_prompt != '' and not part_prompt.lower().startswith('y'):
             print "Sorry. We only recognize the following filesystems:"
             print ", ".join(fsMap.keys())
             raise Exception("Cannot figure out installation location.")
@@ -71,15 +71,7 @@ def getPartition(disk):
         else:
             part = parts[int(part_prompt)]
 
-    while part_prompt != "" and not os.path.exists(part_prompt):
-        print "Partition not found."
-        part_prompt = raw_input("What partition contains your Linux Installation? [%s]: " % our_part.path)
-    if part_prompt != "":
-        our_part = our_disk.partitions[part_prompt]
-    if not our_part.verifyLinux():
-        print "No known Linux distribution on %s." % part_prompt
-        return getPartition(our_disk)
-    return our_part
+    return part
 
 # Delete the swap partitions
 def deleteSwap(our_disk):

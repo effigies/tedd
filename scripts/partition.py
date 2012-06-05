@@ -117,20 +117,18 @@ class partition:
                 self.num_sectors = self.end_sector - self.start_sector
         part_file.close()
 
-    # Determine whether or not Linux is installed on this partition
-    def verifyLinux(self,cwd=os.getcwd()):
-        if self.linux_verified != None:
-            return self.linux_verified
-        path, flag = mount_partition(self)
-        distrodir = os.path.join(cwd,"scripts","distros")
-        if distrodir not in sys.path:
-            sys.path.append(distrodir)
-        for item in os.listdir(os.path.join(cwd,"scripts","distros")):
-            if item.endswith(".py"):
-                module = __import__(item[:-3])
-                if module.predicate(path):
-                    self.linux_verified = module
-                    unmount_partition(path, flag)
-                    return True
-        unmount_partition(path, flag)
-        return False
+# Determine whether or not Linux is installed on this partition
+def verifyLinux(part,cwd=os.getcwd()):
+    path, flag = mount_partition(part)
+    distrodir = os.path.join(cwd,"scripts","distros")
+    if distrodir not in sys.path:
+        sys.path.append(distrodir)
+    for item in os.listdir(os.path.join(cwd,"scripts","distros")):
+        if item.endswith(".py"):
+            module = __import__(item[:-3])
+            if module.predicate(path):
+                self.linux_verified = module
+                unmount_partition(path, flag)
+                return True
+    unmount_partition(path, flag)
+    return False
