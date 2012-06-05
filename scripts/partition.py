@@ -122,7 +122,7 @@ class partition:
         if self.linux_verified != None:
             return self.linux_verified
         path, flag = mount_partition(self)
-	distrodir = os.path.join(cwd,"scripts","distros")
+        distrodir = os.path.join(cwd,"scripts","distros")
         if distrodir not in sys.path:
             sys.path.append(distrodir)
         for item in os.listdir(os.path.join(cwd,"scripts","distros")):

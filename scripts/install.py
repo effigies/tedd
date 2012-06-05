@@ -6,7 +6,7 @@
 import parted as ped
 from devices import getDevices, guessDisk, urandom, zeroFill
 from disk import disk
-from partition import partition
+from partition import partition, fsMap
 from getpass import getpass
 from filesystems import ext
 from luks import luksVolume
@@ -36,16 +36,41 @@ def getDisk():
             dev = disk_prompt
         else:
             print "This doesn't seem to be working. Sorry."
-            except Exception("Cannot figure out installation location.")
+            raise Exception("Cannot figure out installation location.")
 
     return ped.disk.Disk(ped.device.Device(dev))
 
 # Determine which partition contains the Linux installation
-def getPartition(our_disk):
-    print repr(our_disk)
-    our_part = our_disk.guessPartition()
-    print repr(our_part)
-    part_prompt = raw_input("\nWhat partition contains your Linux Installation? [%s]: " % our_part.path)
+def getPartition(disk):
+    parts = [part for part in disk.partitions if part.fileSystem.type in fsMap]
+    if len(parts) == 0:
+        print "No recognized Linux partitions on %s" % disk.device.path
+        print "Following filesystems found:"
+        print "\n".join("%s\t%s" % (part.path,part.fileSystem.type)
+                        for part in disk.partitions)
+        raise Exception("Cannot figure out installation location.")
+
+    elif len(parts) == 1:
+        part_prompt = raw_input("\nFound a Linux partition on %s. Is this "\
+                                "correct? [Y/n] " % parts[0].path)
+        if part_prompt != '' or not part_prompt.lower().startswith('y'):
+            print "Sorry. We only recognize the following filesystems:"
+            print ", ".join(fsMap.keys())
+            raise Exception("Cannot figure out installation location.")
+        else:
+            part = parts[0]
+
+    else:
+        prompt = '\n'.join("[%d]\t%s\t%s" % (i,part.path,part.fileSystem.type)
+                    for x in enumerate(parts))
+        part_prompt = raw_input("\nThe following partitions were detected:\n\n%s"\
+                                "\n\nWhich contains your Linux installation? [0]:"
+                                % prompt)
+        if part_prompt == '':
+            part = parts[0]
+        else:
+            part = parts[int(part_prompt)]
+
     while part_prompt != "" and not os.path.exists(part_prompt):
         print "Partition not found."
         part_prompt = raw_input("What partition contains your Linux Installation? [%s]: " % our_part.path)
