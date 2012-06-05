@@ -47,14 +47,14 @@ class partition:
                 if part_info[4] == "logical":
                     self.logical = True
                 part_size = part_info[3]
-                if part_size.endswith("TB"):
-                    self.size = float(part_size[:-2])*1099511627776
-                elif part_size.endswith("GB"):
-                    self.size = float(part_size[:-2])*1073741824
-                elif part_size.endswith("MB"):
-                    self.size = float(part_size[:-2])*1048576
-                elif part_size.endswith("KB"):
-                    self.size = float(part_size[:-2])*1024
+                if part_size.lower().endswith("tb"):
+                    self.size = float(part_size[:-2])*(1 << 40)
+                elif part_size.lower().endswith("gb"):
+                    self.size = float(part_size[:-2])*(1 << 30)
+                elif part_size.lower().endswith("mb"):
+                    self.size = float(part_size[:-2])*(1 << 20)
+                elif part_size.lower()endswith("kb"):
+                    self.size = float(part_size[:-2])*(1 << 10)
                 else:
                     self.size = int(part_size)
                 if len(part_info) > 5:
@@ -105,7 +105,7 @@ class partition:
 
     # Get the number of sectors used by a partition
     def getSectors(self):
-        part_file = os.popen("fdisk -ul %s" % self.disk.path)
+        part_file = os.popen("fdisk -l %s" % self.disk.path)
         for line in part_file:
             if line.strip().startswith(self.path):
                 debugPrint(line)
