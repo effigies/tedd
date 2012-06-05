@@ -10,7 +10,7 @@ class disk:
             self.partitions[i] = partition(self, i)
 
     def __repr__(self):
-	return "<Disk: %s>" % self.path
+	return "<Disk: %s (%s)>" % (self.path, ','.join(sorted(self.partitions.keys())))
 
     def __getPartitions(self):
         for i in os.listdir(os.path.dirname(self.path)):
@@ -34,8 +34,6 @@ class disk:
                     debugPrint("Disabling %s as swap" % part.path)
 
     def guessPartition(self):
-        
-	print self.partitions
         for i in self.partitions:
             if self.partitions[i].linux_verified != None:
                 return self.partitions[i]

@@ -3,6 +3,15 @@ from disk import disk
 
 import os
 
+def getDevices():
+    """Read devices from parted"""
+    f = os.popen('parted -lm')
+    devices = [line.split(':')[0]
+                for line in f.readlines()
+                    if line.startswith('/dev')]
+    f.close()
+    return devices
+
 # Look for a disk. Probably ought to be improved.
 def guessDisk():
     for i in ["a","b","c", "d", "e", "f"]:

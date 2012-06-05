@@ -3,7 +3,8 @@
 # This file is primarily a wrapper for functionality in other python libraries.
 # Someday this should be replaced with a similar wrapper that offers a GUI
 
-from devices import guessDisk, urandom, zeroFill
+import parted as ped
+from devices import getDevices, guessDisk, urandom, zeroFill
 from disk import disk
 from partition import partition
 from getpass import getpass
@@ -17,14 +18,27 @@ swap_size = 0
 
 # Determine which disk contains the Linux installation
 def getDisk():
-    our_disk = guessDisk()
-    disk_prompt = raw_input("\nWhat disk contains your Linux Installation? [%s]: " % our_disk.path)
-    while disk_prompt != "" and not os.path.exists(disk_prompt):
-        print "Disk not found."
-        disk_prompt = raw_input("\nWhat disk contains your Linux Installation? [%s]: " % our_disk.path)
-    if disk_prompt != "":
-        our_disk = disk(disk_prompt)
-    return our_disk
+    devs = getDevices()
+    if len(devs) > 0:
+        prompt = '\n'.join("[%d]\t%s" % x for x in enumerate(devs))
+        disk_prompt = raw_input("\nThe following disk drives were detected:\n\n%s"\
+                                "\n\nWhich contains your Linux installation? [0]:"
+                                % prompt)
+        if disk_prompt == '':
+            dev = devs[0]
+        else:
+            dev = devs[int(disk_prompt)]
+    else:
+        disk_prompt = raw_input("\nNo disks were detected.\nWhat is the path "\
+                                "of the disk containing your Linux "\
+                                "installation? ")
+        if os.path.exists(disk_prompt):
+            dev = disk_prompt
+        else:
+            print "This doesn't seem to be working. Sorry."
+            except Exception("Cannot figure out installation location.")
+
+    return ped.disk.Disk(ped.device.Device(dev))
 
 # Determine which partition contains the Linux installation
 def getPartition(our_disk):

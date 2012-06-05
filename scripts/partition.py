@@ -53,7 +53,7 @@ class partition:
                     self.size = float(part_size[:-2])*(1 << 30)
                 elif part_size.lower().endswith("mb"):
                     self.size = float(part_size[:-2])*(1 << 20)
-                elif part_size.lower()endswith("kb"):
+                elif part_size.lower().endswith("kb"):
                     self.size = float(part_size[:-2])*(1 << 10)
                 else:
                     self.size = int(part_size)
