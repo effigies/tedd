@@ -9,6 +9,9 @@ class disk:
         for i in self.__getPartitions():
             self.partitions[i] = partition(self, i)
 
+    def __repr__(self):
+	return "<Disk: %s>" % self.path
+
     def __getPartitions(self):
         for i in os.listdir(os.path.dirname(self.path)):
             if i.startswith(os.path.basename(self.path)) and i != os.path.basename(self.path):
@@ -32,6 +35,7 @@ class disk:
 
     def guessPartition(self):
         
+	print self.partitions
         for i in self.partitions:
             if self.partitions[i].linux_verified != None:
                 return self.partitions[i]

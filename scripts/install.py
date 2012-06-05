@@ -28,7 +28,9 @@ def getDisk():
 
 # Determine which partition contains the Linux installation
 def getPartition(our_disk):
+    print repr(our_disk)
     our_part = our_disk.guessPartition()
+    print repr(our_part)
     part_prompt = raw_input("\nWhat partition contains your Linux Installation? [%s]: " % our_part.path)
     while part_prompt != "" and not os.path.exists(part_prompt):
         print "Partition not found."
@@ -245,31 +247,40 @@ if __name__ == "__main__":
 
 #    install_dependencies()
 # Determine disk
+    print "MAIN: Get Disk..."
     our_disk = getDisk()
 # Determine Linux partition
+    print "MAIN: Get Partition..."
     our_part = getPartition(our_disk)
+    print "MAIN: Prepare Partition..."
     our_part.linux_verified.prepare()
 
 # Delete swap
+    print "MAIN: Delete SWAP..."
     deleteSwap(our_disk)
 
 # Delete empty extended partition
+    print "MAIN: Delete EmptyExtended..."
     deleteEmptyExtended(our_disk)
 
 # Shrink Linux partition
+    print "MAIN: Shrink Linux Partition..."
     shrinkLinux(our_disk, our_part)
 
 # Create encrypted partition
 # Random fill encrypted partition
+    print "MAIN: Create Encrypted Partition..."
     encrypted_part = createEncrypted(our_disk)
 
 # Create Logical Volume Group
 # Create Logical Volume: Swap
 # Create Logical Volume: Root
 # Format Logical Volume Root
+    print "MAIN: Create Logical Volume..."
     lvg = createLogicalVolumes(encrypted_part)
 
 # Unpack initrd
+    print "MAIN: Unpack initrd..."
     initrd, base_path, base_flag = unpackInitrd(our_part)
 
     fallback_initrd = duress(lvg, our_part, initrd)
@@ -278,6 +289,7 @@ if __name__ == "__main__":
 
 # Create duress script
 
+    print "MAIN: Create Duress Script..."
     guest(initrd)
 
 # Package initrd

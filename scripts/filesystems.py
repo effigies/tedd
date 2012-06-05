@@ -47,7 +47,7 @@ class ext:
     def format(self, journaling=True):
         if for_real:
             if journaling:
-                f = os.popen("mkfs.ext3 -q %s" % (self.partition.path))
+                f = os.popen("mkfs.ext4 -q %s" % (self.partition.path))
             else:
                 f = os.popen("mkfs.ext2 -q %s" % (self.partition.path))
             f.close()

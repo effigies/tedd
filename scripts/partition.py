@@ -1,8 +1,16 @@
 from debug import debugPrint, for_real
 from filesystems import ext, reiser, xfs, jfs, swap
-import os, math, subprocess, time
+import os, math, subprocess, time, sys
 
 from utils import mount_partition, unmount_partition
+
+fsMap = {'ext2':     ext,
+         'ext3':     ext,
+         'ext4':     ext,
+         'reiserfs': reiser,
+         'xfs':      xfs,
+         'jfs':      jfs,
+         'swap':     swap}
 
 class partition:
     # Get the partition path, disk, number and size
@@ -55,23 +63,20 @@ class partition:
                     self.type = None
                 self.fs = self.fileSystem()
                 
-                if self.type in ["ext2", "ext3", "reiserfs", "jfs", "xfs"]:
+                if self.type in fsMap:
                     self.verifyLinux()
         else:
             self.size = 0
             self.type = None
 
+    def __repr__(self):
+	return "<Part: %s>" % self.path
+
     # Get the file-system specific object
     def fileSystem(self):
-        if self.type in ["ext3", "ext2"]:
-            return ext(self)
-        elif self.type == "reiserfs":
-            print self.type
-            return reiser(self)
-        elif self.type == "jfs":
-            return jfs(self)
-        elif self.type == "xfs":
-            return xfs(self)
+        fs = fsMap.get(self.type)
+        if fs is not None:
+            return fs(self)
         else:
             return None
    
@@ -117,9 +122,12 @@ class partition:
         if self.linux_verified != None:
             return self.linux_verified
         path, flag = mount_partition(self)
+	distrodir = os.path.join(cwd,"scripts","distros")
+        if distrodir not in sys.path:
+            sys.path.append(distrodir)
         for item in os.listdir(os.path.join(cwd,"scripts","distros")):
             if item.endswith(".py"):
-                module = __import__(os.path.join("distros",item[:-3]))
+                module = __import__(item[:-3])
                 if module.predicate(path):
                     self.linux_verified = module
                     unmount_partition(path, flag)

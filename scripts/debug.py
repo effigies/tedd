@@ -1,6 +1,6 @@
 # Print if the specified verbosity is below the global verbose variable
-for_real = True
-verbose = 1
+for_real = False
+verbose = 2
 
 def debugPrint(string, verbosity=1):
     if verbosity <= verbose:
