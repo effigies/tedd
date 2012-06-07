@@ -2,8 +2,6 @@ from debug import debugPrint, for_real
 from filesystems import ext, reiser, xfs, jfs, swap
 import os, math, subprocess, time, sys
 
-from utils import mount_partition, unmount_partition
-
 fsMap = {'ext2':     ext,
          'ext3':     ext,
          'ext4':     ext,

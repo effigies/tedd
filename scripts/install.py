@@ -6,7 +6,7 @@
 import parted as ped
 from devices import getDevices, guessDisk, urandom, zeroFill
 from disk import disk
-from partition import partition, fsMap
+from partition import partition, fsMap, mount_partition, unmount_partition
 from getpass import getpass
 from filesystems import ext
 from luks import luksVolume
@@ -42,7 +42,9 @@ def getDisk():
 
 # Determine which partition contains the Linux installation
 def getPartition(disk):
+    # Filter for partitions with filesystems we know how to handle
     parts = [part for part in disk.partitions if part.fileSystem.type in fsMap]
+
     if len(parts) == 0:
         print "No recognized Linux partitions on %s" % disk.device.path
         print "Following filesystems found:"
@@ -123,30 +125,6 @@ def random_string(length):
         string += random.choice(alphabet)
     return string
 
-def mount_partition(part):
-        fs = os.popen("mount")
-        for line in fs:
-            line_split = line.split()
-            if line_split[0] == part.path:
-                return line_split[2], False
-        randstring = random_string(8)
-        os.mkdir(randstring)
-        if not os.system("mount %s %s" % (part.path, randstring)):
-            return randstring, True
-        return None
-
-def unmount_partition(path, flag):
-    if flag:
-        if not os.system("umount %s" % path):
-            os.removedirs(path)
-        else:
-            time.sleep(2)
-            if not os.system("umount %s" % path):
-                os.removedirs(path)
-            else:
-                debugPrint("WARNING: Could not unmount %s" % path)
-        
-    
 def createEncrypted(our_disk):
     print "\nTEDD is creating the encrypted overlay."
     print "It is *highly* recommended that you random-fill your encrypted partion."

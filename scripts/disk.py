@@ -61,3 +61,6 @@ class disk:
             debugPrint("Deleting partition %s%s" % (part.disk.path, part.number))
             if part.path in self.partitions:
                 del self.partitions[part.path]
+
+def getSwaps(disk):
+    return [part for part in disk.partitions if part.fileSystem.type.startswith('linux-swap')]
