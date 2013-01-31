@@ -4,23 +4,22 @@
 # Someday this should be replaced with a similar wrapper that offers a GUI
 
 import parted as ped
-from devices import getDevices, guessDisk, urandom, zeroFill
+from devices import urandom
 from disk import disk
 from partition import partition, fsMap, mount_partition, unmount_partition
 from getpass import getpass
-from filesystems import ext
 from luks import luksVolume
 from lvm import lvg
 from initrd import initrd
-import copy, os, random, shutil
+import copy, os, random
 
 swap_size = 0
 
 # Determine which disk contains the Linux installation
 def getDisk():
-    devs = getDevices()
+    devs = ped.getAllDevices()
     if len(devs) > 0:
-        prompt = '\n'.join("[%d]\t%s" % x for x in enumerate(devs))
+        prompt = '\n'.join("[%d]\t%s" % (i,x.path) for i,x in enumerate(devs))
         disk_prompt = raw_input("\nThe following disk drives were detected:\n\n%s"\
                                 "\n\nWhich contains your Linux installation? [0]:"
                                 % prompt)
@@ -33,12 +32,12 @@ def getDisk():
                                 "of the disk containing your Linux "\
                                 "installation? ")
         if os.path.exists(disk_prompt):
-            dev = disk_prompt
+            dev = ped.device.Device(disk_prompt)
         else:
             print "This doesn't seem to be working. Sorry."
             raise Exception("Cannot figure out installation location.")
 
-    return ped.disk.Disk(ped.device.Device(dev))
+    return ped.disk.Disk(dev)
 
 # Determine which partition contains the Linux installation
 def getPartition(disk):
