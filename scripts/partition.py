@@ -61,8 +61,8 @@ class partition:
                     self.type = None
                 self.fs = self.fileSystem()
                 
-                if self.type in fsMap:
-                    self.verifyLinux()
+                #if self.type in fsMap:
+                #    verifyLinux(self)
         else:
             self.size = 0
             self.type = None

@@ -1,13 +1,35 @@
 from debug import debugPrint, for_real
 import os
 
-# File-system functions for ext2/3
-class ext:
-    def __init__(self, partition, formatted=True):
+class Filesystem(object):
+    name = "Generic Filesystem"
+
+    def __init__(self, partition):
         self.partition = partition
-        self.name = "ext"
+
+    def freeSpace(self):
+        debugPrint("%s.freeSpace: Not written!" % self.name)
+
+    def fillPartition(self):
+        debugPrint("%s.fillPartition: Not written!" % self.name)
+
+    def shrink(self, newSize):
+        debugPrint("%s.shrink: Not Written!" % self.name)
+
+    def format(self, journaling=True):
+        debugPrint("%s.format: Not Written!" % self.name)
+
+class TunableFS(Filesystem):
+    name = "Tunable Filesystem"
+
+    def __init__(self, partition, formatted=True):
+        super(TunableFS, self).__init__(partition)
         if formatted:
             self.free_space, self.free_blocks, self.block_count = self.freeSpace()
+
+# File-system functions for ext2/3
+class ext(TunableFS):
+    name = "ext"
 
     # Get the free_space, free_blocks, and block_count
     def freeSpace(self):
@@ -56,12 +78,8 @@ class ext:
             debugPrint("Formatted ext volume")
 
 # File-system functions for reiserfs
-class reiser:
-    def __init__(self, partition, formatted=True):
-        self.partition = partition
-        self.name = "reiser"
-        if formatted:
-            self.free_space, self.free_blocks, self.block_count = self.freeSpace()
+class reiser(TunableFS):
+    name = "reiser"
 
     # Get free space, blocks, and block count
     def freeSpace(self):
@@ -108,76 +126,37 @@ class reiser:
         else:
             debugPrint("Filled available space")
 
-    def format(self, journaling=True):
+    def format(self):
         if for_real:
             os.system("mkfs.reiserfs -q %s" % (self.partition.path))
         else:
             debugPrint("Formatted reiser volume")
         self.free_space, self.free_blocks, self.block_count = self.freeSpace()
 
-class jfs:
-    def __init__(self, partition):
-        self.partition = partition
-        self.name = "jfs"
+class jfs(Filesystem):
+    name = "jfs"
 
-    def freeSpace(self):
-        debugPrint("%s.freeSpace: Not written!" % self.name)
-
-    def fillPartition(self):
-        debugPrint("%s.fillPartition: Not written!" % self.name)
-
-    def shrink(self, newSize):
-        debugPrint("%s.shrink: %s cannot shrink!" % (self.name, self.name.upper()))
-
-    def format(self, journaling=True):
+    def format(self):
         if for_real:
-            if journaling:
-                f = os.popen("mkfs.jfs -q %s" % (self.partition.path))
-            f.close()
+            os.system("mkfs.jfs -q %s" % (self.partition.path))
         else:
             debugPrint("Formatted %s volume" % (self.name))
 
-class xfs:
-    def __init__(self, partition):
-        self.partition = partition
-        self.name = "xfs"
+class xfs(Filesystem):
+    name = "xfs"
 
-    def freeSpace(self):
-        debugPrint("%s.freeSpace: Not written!" % self.name)
-
-    def fillPartition(self):
-        debugPrint("%s.fillPartition: Not written!" % self.name)
-
-    def shrink(self, newSize):
-        debugPrint("%s.shrink: %s cannot shrink!" % (self.name, self.name.upper()))
-
-    def format(self, journaling=True):
+    def format(self):
         if for_real:
-            if journaling:
-                f = os.popen("mkfs.xfs -qf %s" % (self.partition.path))
-            f.close()
+            os.system("mkfs.xfs -qf %s" % (self.partition.path))
         else:
             debugPrint("Formatted %s volume" % (self.name))
 
-class swap:
-    def __init__(self, partition):
-        self.partition = partition
-        self.name = "swap"
+class swap(Filesystem):
+    name = "swap"
 
-    def freeSpace(self):
-        debugPrint("%s.freeSpace: Not written!" % self.name)
-
-    def fillPartition(self):
-        debugPrint("%s.fillPartition: Not written!" % self.name)
-
-    def shrink(self, newSize):
-        debugPrint("%s.shrink: Not Written!" % (self.name, self.name.upper()))
-
-    def format(self, journaling=True):
+    def format(self):
         if for_real:
-            if journaling:
-                f = os.popen("mkswap %s" % (self.partition.path))
-            f.close()
+            os.system("mkswap %s" % (self.partition.path))
         else:
             debugPrint("Formatted %s volume" % (self.name))
 
