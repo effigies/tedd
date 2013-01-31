@@ -12,12 +12,14 @@ class initrd:
                     self.install_mod = module
                     break
         assert self.install_mod != None, "No matching distributions."
-        self.path = os.path.realpath(path)
-        self.working_dir = os.path.realpath(working_dir)
+        self.path,self.working_dir,initrd_dir = map(os.path.realpath,
+            (path,working_dir,initrd_dir))
+#        self.path = os.path.realpath(path)
+#        self.working_dir = os.path.realpath(working_dir)
         os.mkdir(self.working_dir)
-        initrd_dir = os.path.realpath(os.path.join(self.working_dir, "initrd"))
+#        initrd_dir = os.path.realpath(os.path.join(self.working_dir, "initrd"))
         os.mkdir(initrd_dir)
-        os.system("cd \"%s\" ; zcat \"%s\" | cpio -i -H newc" % (initrd_dir, self.path))
+        os.system('cd "%s" ; zcat "%s" | cpio -i -H newc' % (initrd_dir, self.path))
         util_archive = tarfile.open(os.path.join(cwd, "tedd-utils.tar.gz"), "r:gz")
         util_archive.extractall(os.path.join(initrd_dir, "bin"))
         util_archive.close()
@@ -85,14 +87,14 @@ class initrd:
         duress_script.close()
         if os.path.exists(os.path.join(self.working_dir, "initrd","scripts","duress.nc")):
             os.remove(os.path.join(self.working_dir, "initrd","scripts","duress.nc"))
-        os.system("cd \"%s\" && mcrypt -q -u -k \"%s\" -a blowfish duress" % (os.path.join(self.working_dir, "initrd","scripts"),password))
+        os.system('cd "%s" && mcrypt -q -u -k "%s" -a blowfish duress' % (os.path.join(self.working_dir, "initrd","scripts"),password))
         shutil.copy(os.path.join(self.working_dir, "initrd", "scripts", "duress.nc"), os.path.join(os.path.dirname(self.path), permname))
 
     def guestPass(self, password):
         guest_nc = open(os.path.join(self.working_dir, "initrd", "scripts", "clean"), "w")
         guest_nc.write("Hello world.")
         guest_nc.close()
-        os.system("cd \"%s\" && mcrypt -q -u -k \"%s\" -a blowfish clean" % (os.path.join(self.working_dir, "initrd","scripts"),password))
+        os.system('cd "%s" && mcrypt -q -u -k "%s" -a blowfish clean' % (os.path.join(self.working_dir, "initrd","scripts"),password))
         shutil.copy(os.path.join(self.working_dir, "initrd", "scripts", "clean.nc"), os.path.join(os.path.dirname(self.path), "clean.nc"))
 
     def packageInitrd(self, dest_name=False):
@@ -100,7 +102,7 @@ class initrd:
             dest_name = os.path.realpath(self.path)
         if os.path.exists(dest_name):
             os.rename(dest_name, "%s.bak" % dest_name)
-        os.system("cd \"%s\" && find . -print | cpio -o -H newc > \"%s.tmp\"" % (os.path.join(self.working_dir,"initrd"), dest_name))
+        os.system('cd "%s" && find . -print | cpio -o -H newc > "%s.tmp"' % (os.path.join(self.working_dir,"initrd"), dest_name))
         os.system("cd \"%s\" && gzip --best \"%s.tmp\" -c > \"%s\" " % (os.path.join(self.working_dir,"initrd"), dest_name, dest_name))
         os.remove("%s.tmp" % dest_name)
 
