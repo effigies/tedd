@@ -1,5 +1,6 @@
 from debug import debugPrint, for_real
 from filesystems import ext, reiser, xfs, jfs, swap
+from partition import fsMap
 import os
 
 class lvg:
@@ -63,18 +64,7 @@ class logicalVolume:
         self.fs = self.fileSystem()
 
     def fileSystem(self):
-        if self.type in ["ext3", "ext2"]:
-            return ext(self)
-        elif self.type == "reiserfs":
-            return reiser(self)
-        elif self.type == "jfs":
-            return jfs(self)
-        elif self.type == "xfs":
-            return xfs(self)
-        elif self.type == "swap":
-            return swap(self)
-        else:
-            return None
+        return fsMap.get(self.type, lambda x: None)(self)
 
     def create(self):
         free, total, size = self.volume_group.extents()
