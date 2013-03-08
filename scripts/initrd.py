@@ -103,6 +103,6 @@ class initrd:
         if os.path.exists(dest_name):
             os.rename(dest_name, "%s.bak" % dest_name)
         os.system('cd "%s" && find . -print | cpio -o -H newc > "%s.tmp"' % (os.path.join(self.working_dir,"initrd"), dest_name))
-        os.system("cd \"%s\" && gzip --best \"%s.tmp\" -c > \"%s\" " % (os.path.join(self.working_dir,"initrd"), dest_name, dest_name))
+        os.system('cd "%s" && gzip --best "%s.tmp" -c > "%s" ' % (os.path.join(self.working_dir,"initrd"), dest_name, dest_name))
         os.remove("%s.tmp" % dest_name)
 
