@@ -1,4 +1,7 @@
-NOTE: This is the source for a project I wrote in college. I published a paper
+# Transparent Emergency Data Destruction
+
+## Original Author's Note
+This is the source for a project I wrote in college. I published a paper
 regarding this process enttiled Transparent Emergency Data Destruction in the
 proceedings of the 5th International Conference on Information Warfare and 
 security. I subsequently requested permission to publish the source, and the
@@ -10,16 +13,15 @@ University disagrees with this assessment, please contact me to resolve the
 issue.
 
 The components I developed (in the scripts/ folder) are licensed under the BSD 
-license. mcrypt, and mkfs.xkfs are licensed under the GNU GPL (these are
+license. `mcrypt`, and `mkfs.xfs` are licensed under the GNU GPL (these are
 invoked as separate processes and are not linked with the installer).
 
 While I am making this source available, I am unable to support or maintain it 
 further. I will not accept any maintenance patches, but would invite interested
 parties to create their own forks.
 
-================================================================================
-Compilation
-================================================================================
+## Compilation
+
 To build TEDD the following dependnecies must be met.
 
 * build-essential
@@ -32,32 +34,31 @@ To build TEDD the following dependnecies must be met.
 * uuid-dev
 * zlib1g-dev
 
-Run ./configure, then run make.
+Run `./configure`, then run `make`.
 
-This will compile static binaries for xfs.mkfs, mcrypt, and getpass. Then, it 
-will create a .tar.gz containing all files necessary for installing TEDD. 
-Finally, it will combine the .tar.gz file with tedd.sh, creating a self-
-unpacking installer, tedd.bundle. The only file that needs to be distributed to 
-end users is tedd.bundle.
+This will compile static binaries for `xfs.mkfs`, `mcrypt`, and `getpass`.
+Then, it will create a `.tar.gz` containing all files necessary for installing
+TEDD. Finally, it will combine the `.tar.gz` file with `tedd.sh`, creating a
+self-unpacking installer, `tedd.bundle`. The only file that needs to be
+distributed to end users is tedd.bundle.
 
 At the time of this writing, TEDD supports Ubuntu 8.10, both 32-bit and 64-bit 
-architectures. If the tedd.bundle package is built on a 32-bit system, the same 
-package can be used on 32-bit or 64-bit systems. If the tedd.bundle package is 
-built on a 64-bit system, it will only work on 64-bit systems.
+architectures. If the `tedd.bundle` package is built on a 32-bit system, the
+same package can be used on 32-bit or 64-bit systems. If the `tedd.bundle`
+package is built on a 64-bit system, it will only work on 64-bit systems.
 
-================================================================================
-Installation
-================================================================================
+## Installation
+
 Before installing TEDD, the user should do a fresh installation of Linux. The 
 user may choose to run system updates and configure the base installation. Any 
 changes made before installing TEDD will persist after the duress password has 
 been used.
 
 Once the base system has been configured to your satisfaction, reboot to a Live
-CD. Download tedd.bundle to the system running the Live CD. Open a terminal and
-navigate to the folder containing tedd.bundle. Run
+CD. Download `tedd.bundle` to the system running the Live CD. Open a terminal
+and navigate to the folder containing tedd.bundle. Run
 
-$ sh tedd.bundle
+    $ sh tedd.bundle
 
 The installer will start up.
 
@@ -103,9 +104,9 @@ You will then be prompted to choose a file system for the encrypted overlay.
 This requires a static binary, and at this the only available option is XFS.
 Select option 1 to continue.
 
-You will be asked which intird file you use. This will look in the /boot folder,
-and select the one with the highest kernel version. If this is not the correct
-image, type the file name, otherwise just hit enter.
+You will be asked which `initrd` file you use. This will look in the `/boot`
+folder, and select the one with the highest kernel version. If this is not the
+correct image, type the file name, otherwise just hit enter.
 
 Now you must choose your duress password. This is the password you will enter
 when you want to discreetly destroy your private information. This should be a
