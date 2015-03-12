@@ -1,0 +1,411 @@
+Disk setup:
+ _________________________________
+|                                 |
+|               sda               |
+|  _____________________________  |
+| |                             | | This is your /boot directory. Keeping it
+| |            sda1             | | separate makes kernel upgrades less
+| |            ext2             | | painful. In addition, we use a FS with
+| |           256 MB            | | preallocated inodes to make shredding a
+| |           /boot             | | possibility. Performance and journaling
+| |_____________________________| | are irrelevant to /boot.
+|  _____________________________  |
+| |                             | | This is where you will install the base
+| |            sda2             | | system. Once you overlay the encrypted
+| |          reiserfs           | | drive, this will not change, so we advise
+| |          2.25 GB            | | that you customize the system a little. But
+| |             /               | | be aware that any traces you leave of your
+| |_____________________________| | activity will not get erased.
+|  _____________________________  |
+| |                             | | Encrypted with a strong password.
+| |            sda3             | |
+| |   LUKS encrypted partition  | |
+| |  _________________________  | |
+| | |                         | | | We use LVM so that we can partition the
+| | |       sda3_crypt        | | | encrypted drive.
+| | |   LVM Physical Volume   | | |
+| | |  _____________________  | | |
+| | | |                     | | | |
+| | | |       crypt         | | | |
+| | | |  LVM Volume Group   | | | |
+| | | |  _________________  | | | |
+| | | | |                 | | | | | Since swap can potentially contain anything
+| | | | |   crypt-swap    | | | | | your memory can contain, it's a good idea
+| | | | |  Logical Volume | | | | | to encrypt that, as well, since it is not
+| | | | |      swap       | | | | | as volatile. I typically use a swap
+| | | | |      2 GB       | | | | | partition the same size as my memory.
+| | | | |_________________| | | | |
+| | | |  _________________  | | | |
+| | | | |                 | | | | | For crypt-drive, we recommend XFS as the
+| | | | |   crypt-drive   | | | | | filesystem, as it is the fastest to create.
+| | | | |  Logical Volume | | | | | Until the scripts we create below get more
+| | | | |       xfs       | | | | | flexible, it will be necessary to use the
+| | | | |                 | | | | | same filesystem as you will create when in
+| | | | |                 | | | | | duress, where speed will be a major
+| | | | |                 | | | | | discriminant between suspicious and
+| | | | |                 | | | | | acceptable behavior. XFS, JFS, or ReiserFS
+| | | | |                 | | | | | are all pretty quick. Ext* take quite a bit
+| | | | |                 | | | | | longer.
+| | | | |                 | | | | |
+| | | | |                 | | | | | You should consider the size of this drive
+| | | | |                 | | | | | your effective hard disk space.
+| | | | |                 | | | | | 
+| | | | |                 | | | | |
+| | | | |_________________| | | | |
+| | | |_____________________| | | |
+| | |_________________________| | |
+| |_____________________________| |
+|_________________________________|
+
+The names are those imposed by Ubuntu when you go through the partitioning
+process on the server or alternate install disks. So we'll stick with these
+conventions.
+
+The sizes are recommendations to give you about 100MB free on the base install
+and /boot on a desktop Ubuntu install.
+
+Before you begin, you should decide upon your duress password and your secure
+password. The secure password should be legitimately strong. The duress
+password should be convincingly strong.
+
+During the install, set your user's password to be your duress password.
+
+If any of what was just said was unclear, read the README for justification.
+
+After install:
+1) Upgrade kernel
+	$ sudo apt-get update
+	$ sudo apt-get install linux-generic linux-headers-generic \
+	> linux-image-generic linux-restricted-modules-generic
+	> linux-restricted-modules-common
+2) Upgrade apt
+	$ sudo apt-get install apt dpkg
+3) Upgrade initramfs and friends
+	$ sudo apt-get install initramfs-tools klibc-utils libklibc
+4) Uncomment /etc/apt/sources.list lines, if necessary
+5) Create /base, /crypt; mount crypt-drive on /crypt
+
+NOTE: We are assuming you don't want any custom settings on your base system.
+You can easily put off all of the following until you have customized your
+install. This is, in fact, recommended behavior. A fresh install is not only
+unpleasant to use, but easy to look for.
+
+You will need mkfs.xfs (or a similar tool for another filesystem; choose for
+speed of creation, not brand loyalty) and mcrypt compiled as statically linked
+binaries. We provide mkfs.xfs for x86 systems, and instructions for compiling
+it otherwise.
+
+You will also need a simple program to read a string without echoing to screen
+and print the input without a trailing newline. The following will work,
+compiled with gcc (clearly not ISO/ANSI/$FOOSTANDARD compliant):
+
+char*getpass(char*);int printf(char*,...);main(){printf("%s",getpass(""));}
+
+Prepare unionfs:
+
+I like to do this on the crypt drive. There's no real need, as this part need
+not be secret. Arguably, it's better not to, as it would show a clear
+progression to a forensic analyst. Do what you will.
+
+If you want not to leave any trace, using `unset HISTFILE` whenever you open a
+new shell until you get the unionfs working will prevent bash from writing your
+history.
+
+With latest initramfs:
+	$ sudo mkdir $initrd_workingdir # Do not use /crypt{,/tmp}!
+	$ sudo chown -R you.you $initrd_workingdir
+	$ pushd $initrd_workingdir
+	$ scp host:getpass .
+	$ mkdir initrd
+	$ pushd initrd
+	$ zcat /boot/$initramfs | cpio -i -H newc
+
+	$ echo alias sha256 sha256_generic >> etc/modprobe.d/aliases
+	$ cp ../getpass bin
+	$ cp -R /lib/modules/$version/ubuntu/fs/aufs lib/modules/$version/
+
+scripts/local:mountroot() should look something like this:
+
+mountroot ()
+{
+	[ "$quiet" != "y" ] && log_begin_msg "Running /scripts/local-top"
+	run_scripts /scripts/local-top
+	[ "$quiet" != "y" ] && log_end_msg
+
+	[ "$quiet" != "y" ] && log_begin_msg "Running /scripts/local-premount"
+	run_scripts /scripts/local-premount
+	[ "$quiet" != "y" ] && log_end_msg
+
+	modprobe aufs
+	mkdir -p /base
+	mkdir -p /crypt
+	mount -t reiserfs -o ro /dev/sda1 /base
+
+	if [ -e /dev/mapper/crypt-drive ]
+	then
+		mount -t xfs -o rw /dev/mapper/crypt-drive /crypt
+	else
+		mount -t tmpfs -o rw none /crypt
+	fi
+
+	mount -t aufs -o rw,dirs=/crypt=rw:/base=ro aufs /root
+	mkdir -p /root/base
+	mkdir -p /root/crypt
+	mount --move /base /root/base
+	mount --move /crypt /root/crypt
+
+	[ "$quiet" != "y" ] && log_begin_msg "Running /scripts/local-bottom"
+	run_scripts /scripts/local-bottom
+	[ "$quiet" != "y" ] && log_end_msg
+}
+
+The last four new lines (starting with `mkdir -p /root/base`) make your base
+and encrypted drives accessible from within your system, which is of limited
+utility, other than for verifying that the system is behaving as you expect.
+`df -h` should show a root partition larger than your base system when things
+are working, so they are not necessary. As we will see later, though, there is
+no increase in security inherent in choosing not to move them, though I do not,
+myself.
+
+In scripts/local-top/cryptroot:setup_mapping()
+	Replace
+		$cryptcreate < /dev/console > /dev/console 2>&1
+	With
+		echo -n "Enter password to unlock the disk ($crypttarget): "
+		PASS="$(getpass < /dev/console 2> /dev/console)"
+		echo -n "$PASS" | $cryptcreate > /dev/null 2>&1
+
+
+/etc/fstab should look something like this:
+
+proc			/proc	proc		defaults	0	0
+aufs			/	aufs		rw		0	0
+/dev/sda1		/boot	reiserfs	ro,noauto	0	0
+/dev/sda2		/base	reiserfs	ro,noauto	0	0
+/dev/mapper/crypt-drive	/crypt	xfs		rw,noauto	0	0
+/dev/mapper/crypt-swap	none	swap		sw		0	0
+
+Incidentally, there is a silly thing that happens when you insert a line into
+your fstab: it may magically becomes legal where the equivalent command was
+not.
+
+That is, without these lines,
+	mount -t reiserfs -o rw /dev/sda2 /base
+is illegal, whereas, with these lines,
+	mount -o rw /base
+is perfectly legal.
+
+Curiously, if /crypt is never moved, it can't be mounted in either manner.
+However, /crypt is what everything is written to anyway, so it doesn't much
+matter.
+
+Since it takes root privileges to mount /base, there is no reason that an
+attacker could not add these lines herself if she could mount them with them
+in. Therefore, there is no advantage in not including them. They are left
+noauto, as they would otherwise produce unsightly warnings during bootup.
+My point is that your base system is vulnerable to a root user in any event, so
+it's better to be aware of this than to pretend it is protected because the
+command is illegal, lacking that line.
+
+At this point, we should note that the changes we've made are not general
+changes. For instance, if you want to use jfs and not xfs, your changes
+will need to reflect that.
+
+Since it's possible we've made a mistake, we want to be able to treat our
+system like normal and get back on our feet. Therefore, let's abuse Ubuntu's
+backup scheme for our own purposes. The following commands are what I used at
+the time of this writing, though the latest available release and kernel may
+change this slightly.
+
+	$ pushd /boot
+	$ sudo cp initrd.img-2.6.24-16-generic{,.bak}
+	$ sudo cp initrd.img-2.6.24-1{9,6}-generic
+	$ popd
+
+And edit your grub so that -16 single user mode points to .bak, and -16
+regular points to the -19 kernel.
+
+We are now protected. Let's overwrite the initrd:
+
+	(We should be in the folder initrd we've been editing, as root)
+	# find . -print | cpio -o -H newc > /boot/initrd.img-2.6.24-19-generic
+
+If all has gone to plan, we should now have a working system: A base install of
+Ubuntu Linux, with an encrypted layer that catches any changes made. If all you
+want is to prevent a laptop thief from being able to access your private data,
+then you are done. Just make sure you don't leave the thing unlocked, or your
+data is there for the taking.
+
+Now, for the rest of us, it's time to get sneaky.
+
+You will need to place a statically linked binary of mkfs.xfs in the bin/ of
+your initrd working directory. (See instructions at the end of this document.)
+
+Rerun this line:
+	$ sudo cp /boot/initrd.img-2.6.24-1{9,6}-generic
+
+To scripts/local-top/cryptroot:setup_mapping(), we'll make the following
+modifications:
+	Replace
+		elif [ -p /dev/.initramfs/usplash_outfifo ] && [ -x /sbin/usplash_write ]; then
+			usplash_write "INPUTQUIET Enter password to unlock the disk ($crypttarget): "
+			PASS="$(cat /dev/.initramfs/usplash_outfifo)"
+			echo -n "$PASS" | $cryptcreate > /dev/null 2>&1
+		else
+			echo -n "Enter password to unlock the disk ($crypttarget): "
+			PASS="$(getpass < /dev/console 2> /dev/console)"
+			echo -n "$PASS" | $cryptcreate > /dev/null 2>&1
+		fi
+	With
+		elif [ -p /dev/.initramfs/usplash_outfifo ] && [ -x /sbin/usplash_write ]; then
+			usplash_write "INPUTQUIET Enter password to unlock the disk ($crypttarget): "
+			PASS="$(cat /dev/.initramfs/usplash_outfifo)"
+			FLAG=1
+		else
+			echo -n "Enter password to unlock the disk ($crypttarget): "
+			PASS="$(getpass < /dev/console 2> /dev/console)"
+			FLAG=1
+		fi
+		if [ "$FLAG" ]
+		then
+			mcrypt -q -k "$PASS" -d /scripts/duress.nc > /dev/null 2>&1
+			mcrypt -q -k "$PASS" -d /scripts/clean.nc > /dev/null 2>&1
+			if [ -e /scripts/duress ]
+			then
+				chmod +x /scripts/duress
+				/scripts/duress "$PASS" "$cryptsource" "$crypttarget" > /dev/null 2>&1
+			elif [ -e /scripts/clean ]
+			then
+				break
+			fi
+			echo -n "$PASS" | $cryptcreate > /dev/null 2>&1
+		fi
+
+Now that we've placed the call, we'll need to create a script to do the
+reformatting and clean up. As you've no doubt noticed, I've chosen the subtle
+name of "duress". In the future, this will likely change, but we might as well
+be clear for the time being.
+
+Create scripts/duress:
+	#!/bin/sh
+	
+	# Example invocation: /scripts/duress "$PASS" /dev/sda2 sda2_crypt
+	PASS="$1"
+	cryptsource="$2"
+	crypttarget="$3"
+	
+	# This is the most convenient way to access LVM functionality
+	ln -s /sbin/lvm /bin/pvcreate
+	ln -s /sbin/lvm /bin/vgcreate
+	ln -s /sbin/lvm /bin/vgchange
+	ln -s /sbin/lvm /bin/lvcreate
+	
+	# These next two commands are going to be most of the heavy lifting involved
+	# here.
+	echo -n "$PASS" | cryptsetup luksFormat $cryptsource
+	echo -n "$PASS" | cryptsetup luksOpen $cryptsource $crypttarget
+	
+	# Set up LVM
+	pvcreate /dev/mapper/$crypttarget
+	vgcreate crypt /dev/mapper/$crypttarget
+	vgchange -a y crypt
+	lvcreate -Cy -L2048 -nswap crypt
+	lvcreate -Cy -l +100%FREE -ndrive crypt
+	
+	# Create your swap. We want this system to look credible.
+	mkswap /dev/mapper/crypt-swap
+	
+	# XFS seems to be the fastest filesystem to create
+	mkfs.xfs -q /dev/mapper/crypt-drive
+	
+	# Replace this initramfs
+	# Use install -p, rather than cp, to preserve timestamps
+	mkdir -p /base
+	mount -t auto -o rw /dev/sda1 /base
+	#shred /base/boot/initrd.img-2.6.24-19-generic
+	install -p /base/boot/initrd.img-2.6.24.16-generic /base/boot/initrd.img-2.6.24-19-generic
+	
+	# Finish up and leave us in the state the normal script expects
+	umount /base
+	vgchange -a n crypt
+	cryptsetup luksClose $crypttarget
+
+There is a commented shred line you may wish to consider. Remember that this
+initramfs file is the closest thing to solid evidence that you destroyed
+anything. However, it will take several seconds to execute, which is enough to
+trigger suspicions in pretty much anybody. And one should think that the
+presence of an encrypted drive is already going to raise an eyebrow or two.
+
+Note that you need to be very sure you've typed all of these commands
+correctly. Since using them is meant also to destroy them, they're tricky to
+debug. I recommend practicing in VMWare, using snapshots, then copying the
+working script to your live system.
+
+Now, let's encrypt the script, removing the plaintext:
+	$ mcrypt -q -u -k "$PASS" -a blowfish duress
+
+And that's it. Time to make the initramfs:
+	# find . -print | cpio -o -H newc > /boot/initrd.img-2.6.24-19-generic
+
+Reboot, and you're golden. The only real concern will be upgrading kernels,
+which will require rebuilding the initramfs. Just be sure to remember which
+old initramfs's are decoys.
+
+-------------------------------------------------------------------------------
+Statically linked binaries
+
+There are a couple of statically linked binaries needed for everything to work.
+Naturally, these particular programs present us with several problems. So here
+is a quick guide to compiling these yourself, in case our host doesn't
+presently have them compiled for your system.
+
+mkfs.xfs:
+A couple issues.
+
+The first is that, at least on my system, you can have libaio,
+but it still won't find lio_listio. Things still compile fine, so to keep
+configure from crashing, under the line:
+            echo 'FATAL ERROR: could not find a library with lio_listio.'
+comment out:
+            exit 1
+
+XFS by default compiles with the -DDEBUG flag, and the -DDEBUG flag causes make
+to try to compile a function that does not exist.
+
+$ export CFLAGS="-static"
+$ ./configure --enable-shared=no
+$ make DEBUG="-DNDEBUG"
+$ pushd mkfs
+$ gcc -static -o mkfs.xfs maxtrres.o proto.o xfs_mkfs.o \
+../libxfs/.libs/libxfs.a -luuid ../libdisk/.libs/libdisk.a -lrt -lpthread
+$ popd
+
+(That gcc line is the last line in the compilation of the mkfs directory, with
+the addition of -static.)
+
+
+mcrypt:
+First, you need statically compiled libmcrypt and libmhash. Fortunately, these
+are easy. Just compile with --enable-static. Then you'll need to remove some
+code from src/mcrypt.c and src/extra.c. Specifically, the parts surrounded by
+
+#ifdef HAVE_GETPWUID
+...
+#endif
+
+Of course, if there's an #else block, you'll leave its contents behind.
+
+Then, compile like so:
+
+$ export CFLAGS="-static -fno-stack-protection"
+$ ./configure --enable-static
+$ make
+$ pushd src
+$ gcc -static -fno-stack-protector -I/usr/local/include -Wall -o mcrypt \
+extra.o mcrypt.o keys.o random.o rndunix.o xmalloc.o functions.o errors.o \
+bits.o openpgp.o rndwin32.o environ.o getpass.o ufc_crypt.o popen.o classic.o \
+rfc2440.o gaaout.o  -lz /usr/local/lib/libmhash.a -L/usr/local/lib \
+/usr/local/lib/libmcrypt.a
+
+This one is slightly different from the last line for mcrypt, as .so is changed
+to .a, and `-static -fno-stack-protector' is inserted.

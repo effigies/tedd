@@ -1,0 +1,66 @@
+Project Beer Bottle
+2008 Chris Johnson
+
+"No, no, it's just a beer bottle." -Jerry Fletcher
+
+This project was conceived to protect all sensitive information on a hard
+drive, with a twist that appeals to the paranoiac in all of us.
+
+Sensitive information comes in myriad forms, many one might never think
+specifically to protect. Browser caches, saved emails, photos, and videos of
+you singing that never quite made it to YouTube are just a few things that
+would tell people more about you than you would want them to know. What's more,
+even deleting these files would not stop a sufficiently determined individual.
+
+Unsuprisingly, many people have taken to encrypting their hard drives. Several
+Linux distributions even present this as an option during install. Of course,
+use of this feature is frequently out of concern for a laptop thief, rather
+than a well-resourced forensic investigator, but, done properly, it can work
+just as well for either.
+
+As even Ubuntu allows encrypted installation, we clearly must be offering
+something a little different. It is this: on an unencrypted partition, one
+leaves a basic install. An encrypted partition is then overlaid with unionfs
+(actually aufs, as unionfs produces unsightly core dumps), and all changes made
+to the system are placed on the encrypted drive. The boot process is then
+rigged to allow a duress password to nuke all of the data in the encrypted
+drive.
+
+To demonstrate the advantages of this setup, we present three scenarios:
+
+Your mother wishes to use your computer. Since you set up your boot scripts to
+allow a user who cannot enter the password to use the base system overlaid with
+tmpfs, she has a usable system with no possibility of discovering your unsavory
+browsing habits or deleting your home directory.
+
+A thief steals your laptop. When he connects it to the wireless at a local
+coffee shop, it calls home as he uses it, without ever exposing your personal
+data to a potential identity thief or blackmailer.
+
+A customs officer insists that you turn on your computer and allow him to
+search for whatever customs officers feel entitled to search for. Upon reaching
+the password prompt for your encrypted device, he demands that you enter a
+password. You enter your duress password, a fresh install of Ubuntu appears and
+there is no longer anything there to find. Furthermore, it is impossible to
+prove that there was ever anything else there.
+
+Of course, this last scenario would never happen in real life, but, let's face
+it: duress passwords are neat.
+
+So what's up with the name? In the movie Conspiracy Theory, Jerry balances a
+beer bottle on his door handle, so that it crashes noisily when someone tries
+to jiggle his doorknob. This signals for him to destroy everything in his
+apartment. We felt thermite might be a suspicious way to hide the data, so we
+settled for mathematically provable infeasiblity.
+
+
+CREDITS
+At best, I can only take credit for pushing this project forward (and a few of
+the more brilliant ideas). A lot of the thinking and a little of the coding
+were done by the following people:
+Brady Deetz
+James Johnson
+Austin Roberts
+
+Also, most of the initial implementation was done while on the clock at True
+Digital Security of Tulsa, OK.

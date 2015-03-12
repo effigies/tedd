@@ -1,0 +1,2 @@
+- Wipe LUKS keys from memory during shutdown process
+- Touch initial system to hide elapsed time since install
