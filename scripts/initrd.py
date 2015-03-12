@@ -1,6 +1,63 @@
 #!/usr/bin/env python
 import os, shutil, tarfile
 
+duress_script_template = """#!/bin/sh
+
+# Example invocation: /scripts/duress "$PASS" /dev/sda2 sda2_crypt
+PASS="$1"
+cryptsource="$2"
+crypttarget="$3"
+
+# This is the most convenient way to access LVM functionality
+ln -s /sbin/lvm /bin/pvcreate
+ln -s /sbin/lvm /bin/vgcreate
+ln -s /sbin/lvm /bin/vgchange
+ln -s /sbin/lvm /bin/lvcreate
+
+# Make sure the headers are trashed, not just partially overwritten
+HEADERSIZE=`cryptsetup luksDump $cryptsource | grep Payload`
+set -- $HEADERSIZE
+dd of=$cryptsource if=/dev/urandom count=$3
+
+# These next two commands are going to be most of the heavy lifting involved
+# here.
+echo -n "$PASS" | cryptsetup luksFormat $cryptsource
+echo -n "$PASS" | cryptsetup luksOpen $cryptsource $crypttarget
+
+# Set up LVM
+pvcreate /dev/mapper/$crypttarget
+vgcreate {volgroupname} /dev/mapper/$crypttarget
+vgchange -a y {volgroupname}
+lvcreate -Cy -L{swapsize} -nswap {volgroupname}
+lvcreate -Cy -l +100%%FREE -noverlay {volgroupname}
+
+# Create your swap. We want this system to look credible.
+mkswap {swappath}
+
+# XFS seems to be the fastest filesystem to create
+mkfs.{overlay.type} -q {overlay.path}
+
+# Replace this initramfs
+# Using noatime prevents a record of the swap
+mkdir -p /boot
+mount -t {base.type} -o rw,noatime {base.path} /boot
+
+# Rather than deleting the old initrd, we're going to swap them around
+# So your current access password becomes your new duress password
+
+mv /boot/boot/access.nc /boot/boot/tmp.nc
+mv /boot/boot/duress.nc /boot/boot/access.nc
+mv /boot/boot/tmp.nc /boot/boot/duress.nc
+mv /boot/boot/initrd.img-`uname -r` /boot/boot/initrd.tmp
+mv /boot/boot/{secondinitrd} /boot/boot/initrd.img-`uname -r`
+mv /boot/boot/initrd.tmp /boot/boot/{secondinitrd}
+
+# Finish up and leave us in the state the normal script expects
+umount /boot
+rm -rf /boot
+vgchange -a n {volgroupname}
+cryptsetup luksClose $crypttarget"""
+
 class initrd:
     def __init__(self, path, working_dir, base_dir, cwd=os.getcwd()):
         self.install_mod = None
@@ -27,62 +84,12 @@ class initrd:
 
     def createDuress(self, lvg, base, password, this_initrd, second_initrd, permname):
         duress_script = open(os.path.join(self.working_dir, "initrd","scripts","duress"), "w")
-        script_text = """	#!/bin/sh
-	
-	# Example invocation: /scripts/duress "$PASS" /dev/sda2 sda2_crypt
-	PASS="$1"
-	cryptsource="$2"
-	crypttarget="$3"
-	
-	# This is the most convenient way to access LVM functionality
-	ln -s /sbin/lvm /bin/pvcreate
-	ln -s /sbin/lvm /bin/vgcreate
-	ln -s /sbin/lvm /bin/vgchange
-	ln -s /sbin/lvm /bin/lvcreate
-
-    # Make sure the headers are trashed, not just partially overwritten
-    HEADERSIZE=`cryptsetup luksDump $cryptsource | grep Payload`
-    set -- $HEADERSIZE
-    dd of=$cryptsource if=/dev/urandom count=$3
-	
-	# These next two commands are going to be most of the heavy lifting involved
-	# here.
-	echo -n "$PASS" | cryptsetup luksFormat $cryptsource
-	echo -n "$PASS" | cryptsetup luksOpen $cryptsource $crypttarget
-	
-	# Set up LVM
-	pvcreate /dev/mapper/$crypttarget
-	vgcreate %s /dev/mapper/$crypttarget
-	vgchange -a y %s
-	lvcreate -Cy -L%s -n%s %s
-	lvcreate -Cy -l +100%%FREE -n%s %s
-	
-	# Create your swap. We want this system to look credible.
-	mkswap %s
-	
-	# XFS seems to be the fastest filesystem to create
-	mkfs.%s -q %s
-	
-	# Replace this initramfs
-	# Using noatime prevents a record of the swap
-	mkdir -p /boot
-	mount -t %s -o rw,noatime %s /boot
-
-    # Rather than deleting the old initrd, we're going to swap them around
-    # So your current access password becomes your new duress password
-    
-    mv /boot/boot/access.nc /boot/boot/tmp.nc
-    mv /boot/boot/duress.nc /boot/boot/access.nc
-    mv /boot/boot/tmp.nc /boot/boot/duress.nc
-    mv /boot/boot/initrd.img-`uname -r` /boot/boot/initrd.tmp
-    mv /boot/boot/%s /boot/boot/initrd.img-`uname -r`
-    mv /boot/boot/initrd.tmp /boot/boot/%s
-	
-	# Finish up and leave us in the state the normal script expects
-	umount /boot
-    rm -rf /boot
-	vgchange -a n %s
-	cryptsetup luksClose $crypttarget""" % (lvg.group_name, lvg.group_name, (lvg.logical_volumes["swap"].size/1024/1024), "swap", lvg.group_name, "overlay", lvg.group_name,  lvg.logical_volumes["swap"].path, lvg.logical_volumes["overlay"].type, lvg.logical_volumes["overlay"].path, base.type, base.path, second_initrd, second_initrd, lvg.group_name)
+        script_text = duress_script_template.format(
+            volgroupname=lvg.group_name,
+            swapsize=lvg.logical_volumes["swap"].size / (2 ** 20),
+            swappath=lvg.logical_volumes["swap"].path,
+            overlay=lvg.logical_volumes["overlay"],
+            base=base, second_initrd=second_initrd)
         duress_script.write(script_text)
         duress_script.close()
         if os.path.exists(os.path.join(self.working_dir, "initrd","scripts","duress.nc")):
