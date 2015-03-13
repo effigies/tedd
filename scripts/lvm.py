@@ -1,7 +1,13 @@
 from debug import debugPrint, for_real
-from filesystems import ext, reiser, xfs, jfs, swap
 from partition import fsMap
-import os
+from subprocess import call, Popen, PIPE
+
+
+FACTOR = {'KiB': 2 ** 10,
+          'GiB': 2 ** 20,
+          'MiB': 2 ** 30,
+          'TiB': 2 ** 40}
+
 
 class lvg:
     def __init__(self, group_name, device_list):
@@ -11,55 +17,47 @@ class lvg:
 
     def pvcreate(self):
         for device in self.device_list:
+            args = ['pvcreate', device.path]
             if for_real:
-                os.system("pvcreate %s" % (device.path))
+                call(args)
             else:
-                print "Creating physical volume %s" % (device.path)
+                print 'Creating physical volume: ' + ' '.join(args)
 
     def vgcreate(self):
-        comm_string = "vgcreate %s" % self.group_name
-        for device in self.device_list:
-            comm_string += " %s" % device.path
         if for_real:
-            os.system(comm_string)
+            call(['vgcreate', self.group_name] +
+                 [device.path for device in self.device_list])
         else:
             print "Creating volume group"
 
     def vgactivate(self):
         if for_real:
-            os.system("vgchange -a y %s" % self.group_name)
+            call(['vgchange', '-a', 'y', self.group_name])
         else:
             print "Activating volume group"
 
     def lvcreate(self, size, name, fs):
-        self.logical_volumes[name] = logicalVolume(self,size,name,fs)
+        self.logical_volumes[name] = logicalVolume(self, size, name, fs)
         self.logical_volumes[name].create()
 
     def extents(self):
-        f = os.popen("vgdisplay %s" % self.group_name)
-        for line in f:
+        pipe = Popen(['vgdisplay', self.group_name], stdout=PIPE)
+        for line in pipe.stdout:
             if line.strip().startswith("Free"):
                 free_extents = int(line.split()[4])
             elif line.strip().startswith("Total"):
                 total_extents = int(line.split()[2])
             elif line.strip().startswith("VG Size"):
-                total_size = int(float(line.split()[-2]))
-                if line.split()[-1] == "TB":
-                    total_size *= 1099511627776
-                elif line.split()[-1] == "GB":
-                    total_size *= 1073741842
-                elif line.split()[-1] == "MB":
-                    total_size *= 1048576
-                elif line.split()[-1] == "KB":
-                    total_size *= 1024
+                base, unit = line.split()[-2:]
+                total_size = int(float(base)) * FACTOR[unit]
         return free_extents, total_extents, total_size
 
+
 class logicalVolume:
-    def __init__(self, vg, size, name,fs):
+    def __init__(self, vg, size, name, fs):
         self.volume_group = vg
         self.size = int(size)
         self.name = name
-        self.path = "/dev/mapper/%s-%s" % (vg.group_name, name)
         self.type = fs
         self.fs = self.fileSystem()
 
@@ -70,6 +68,12 @@ class logicalVolume:
         free, total, size = self.volume_group.extents()
         lv_extents = int(min((float(self.size) / size)*total, free))
         if for_real:
-            os.system("lvcreate %s -l %s -n %s" % (self.volume_group.group_name, lv_extents, self.name))
+            call(['lvcreate', self.volume_group.group_name, '-l', lv_extents,
+                  '-n', self.name])
         else:
             debugPrint("Creating logical volume")
+
+    @property
+    def path(self):
+        return "/dev/mapper/{}-{}".format(self.volume_group.group_name,
+                                          self.name)

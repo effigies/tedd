@@ -6,30 +6,34 @@
 import parted as ped
 from devices import urandom
 from disk import disk
-from partition import partition, fsMap, mount_partition, unmount_partition
+from partition import fsMap, mount_partition
 from getpass import getpass
 from luks import luksVolume
 from lvm import lvg
-from initrd import initrd
-import copy, os, random
+from initrd import initrd as mkInitrd
+import copy
+import os
+import random
 
 swap_size = 0
+
 
 # Determine which disk contains the Linux installation
 def getDisk():
     devs = ped.getAllDevices()
     if len(devs) > 0:
-        prompt = '\n'.join("[%d]\t%s" % (i,x.path) for i,x in enumerate(devs))
-        disk_prompt = raw_input("\nThe following disk drives were detected:\n\n%s"\
-                                "\n\nWhich contains your Linux installation? [0]:"
-                                % prompt)
+        prompt = '\n'.join("[%d]\t%s" % (i, x.path)
+                           for i, x in enumerate(devs))
+        disk_prompt = raw_input("\nThe following disk drives were detected:\n"
+                                "\n{}\n\nWhich contains your Linux "
+                                "installation? [0]:".format(prompt))
         if disk_prompt == '':
             dev = devs[0]
         else:
             dev = devs[int(disk_prompt)]
     else:
-        disk_prompt = raw_input("\nNo disks were detected.\nWhat is the path "\
-                                "of the disk containing your Linux "\
+        disk_prompt = raw_input("\nNo disks were detected.\nWhat is the path "
+                                "of the disk containing your Linux "
                                 "installation? ")
         if os.path.exists(disk_prompt):
             dev = ped.device.Device(disk_prompt)
@@ -39,6 +43,7 @@ def getDisk():
 
     return ped.disk.Disk(dev)
 
+
 # Determine which partition contains the Linux installation
 def getPartition(disk):
     # Filter for partitions with filesystems we know how to handle
@@ -47,13 +52,13 @@ def getPartition(disk):
     if len(parts) == 0:
         print "No recognized Linux partitions on %s" % disk.device.path
         print "Following filesystems found:"
-        print "\n".join("%s\t%s" % (part.path,part.fileSystem.type)
+        print "\n".join("%s\t%s" % (part.path, part.fileSystem.type)
                         for part in disk.partitions)
         raise Exception("Cannot figure out installation location.")
 
     elif len(parts) == 1:
-        part_prompt = raw_input("\nFound a Linux partition on %s. Is this "\
-                                "correct? [Y/n] " % parts[0].path)
+        part_prompt = raw_input("\nFound a Linux partition on {}. Is this "
+                                "correct? [Y/n] ".format(parts[0].path))
         if part_prompt != '' and not part_prompt.lower().startswith('y'):
             print "Sorry. We only recognize the following filesystems:"
             print ", ".join(fsMap.keys())
@@ -62,11 +67,12 @@ def getPartition(disk):
             part = parts[0]
 
     else:
-        prompt = '\n'.join("[%d]\t%s\t%s" % (i,part.path,part.fileSystem.type)
-                    for x in enumerate(parts))
-        part_prompt = raw_input("\nThe following partitions were detected:\n\n%s"\
-                                "\n\nWhich contains your Linux installation? [0]:"
-                                % prompt)
+        prompt = '\n'.join("[{:d}]\t{}\t{}".format(i, part.path,
+                                                   part.fileSystem.type)
+                           for i, x in enumerate(parts))
+        part_prompt = raw_input("\nThe following partitions were detected:\n"
+                                "\n{}\n\nWhich contains your Linux "
+                                "installation? [0]:".format(prompt))
         if part_prompt == '':
             part = parts[0]
         else:
@@ -74,13 +80,14 @@ def getPartition(disk):
 
     return part
 
+
 # Delete the swap partitions
 def deleteSwap(our_disk):
     global swap_size
     swap_list = our_disk.getSwap()
     if len(swap_list) > 0:
-        print "\nIt is *highly* recommended that you encrypt your swap partition."
-        print "May we delete the following swap partitions? "    
+        print "\nIt is *highly* recommended that you encrypt your swap " \
+            "partition.\nMay we delete the following swap partitions?"
         swap_size = 0
         for i in swap_list:
             swap_size += int(i.size)
@@ -92,6 +99,7 @@ def deleteSwap(our_disk):
         else:
             swap_size = 0
 
+
 # Delete any empty extended partitions
 def deleteEmptyExtended(our_disk):
     has_logical = False
@@ -101,32 +109,36 @@ def deleteEmptyExtended(our_disk):
     if not has_logical:
         for i in copy.copy(our_disk.partitions):
             if our_disk.partitions[i].type == "extended":
-                print "\nDeleting the swap partition has left the following extended partition empty."
+                print "\nDeleting the swap partition has left the following " \
+                    "extended partition empty."
                 print i
                 delete_extended_prompt = raw_input("May we delete it? [Y/n]")
                 if not delete_extended_prompt.startswith("n"):
                     our_disk.deletePart((our_disk.partitions[i],))
                 break
 
+
 def shrinkLinux(our_disk, our_part):
-    print "\nTEDD will now shrink your Linux partition to make room for the encrypted overlay."
+    print "\nTEDD will now shrink your Linux partition to make room for the " \
+        "encrypted overlay."
     shrink_prompt = raw_input("May we proceed? [Y/n]: ")
     if not shrink_prompt.lower().startswith("n"):
-        print "This may take a while depending on your file system and partition size. Please be patient."
+        print "This may take a while depending on your file system and " \
+            "partition size. Please be patient."
         our_part.resize()
         our_disk = disk(our_disk.path)
         our_part = our_disk.partitions[our_part.path]
 
+
 def random_string(length):
     alphabet = "abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    string = ""
-    for i in range(0,length):
-        string += random.choice(alphabet)
-    return string
+    return [random.choice(alphabet) for _ in range(length)]
+
 
 def createEncrypted(our_disk):
     print "\nTEDD is creating the encrypted overlay."
-    print "It is *highly* recommended that you random-fill your encrypted partion."
+    print "It is *highly* recommended that you random-fill your encrypted " \
+        "partion."
     print "Which method would you like to use?"
 
     methods = ["None", "/dev/urandom"]
@@ -150,14 +162,17 @@ def createEncrypted(our_disk):
         urandom(encrypted_part)
 
     while True:
-        print "Enter a password. This is the password you will use to *access* your data, not to destroy it."
+        print "Enter a password. This is the password you will use to " \
+            "*access* your data, not to destroy it."
         password_prompt = None
         while not password_prompt:
             password_prompt = getpass()
         if password_prompt != getpass("Verify: "):
             print "Passwords did not match"
-        else: break
-    luks = luksVolume(encrypted_part, password_prompt, "%s_crypt" % os.path.basename(encrypted_part.path))
+        else:
+            break
+    luks = luksVolume(encrypted_part, password_prompt,
+                      "%s_crypt" % os.path.basename(encrypted_part.path))
     luks.luksFormat()
     luks.luksOpen()
     return luks
@@ -170,7 +185,8 @@ def createLogicalVolumes(encrypted_part):
     luks_lvg.pvcreate()
     luks_lvg.vgcreate()
     luks_lvg.vgactivate()
-    enc_swap_prompt = raw_input("\nHow big do you want your encrypted swap (in bytes)? [%s] " % swap_size)
+    enc_swap_prompt = raw_input("\nHow big do you want your encrypted swap "
+                                "(in bytes)? [%s] " % swap_size)
     try:
         enc_swap = int(enc_swap_prompt)
     except:
@@ -180,7 +196,8 @@ def createLogicalVolumes(encrypted_part):
     luks_lvg.logical_volumes["swap"].fs.format()
     vg_free, vg_total, vg_size = luks_lvg.extents()
     enc_size = int((float(vg_free)/vg_total)*vg_size)
-    enc_overlay_prompt = raw_input("\nHow big do you want your encrypted overlay (in bytes)? [%s] " % enc_size)
+    enc_overlay_prompt = raw_input("\nHow big do you want your encrypted "
+                                   "overlay (in bytes)? [%s] " % enc_size)
     if enc_overlay_prompt != "":
         enc_size = int(enc_overlay_prompt)
 
@@ -189,12 +206,13 @@ def createLogicalVolumes(encrypted_part):
     for num in range(0, len(fs_list)):
         print "%s. %s" % ((num+1), fs_list[num])
     fs_prompt = -1
-    while not int(fs_prompt) in range(1,len(fs_list)+1):
+    while not int(fs_prompt) in range(1, len(fs_list) + 1):
         fs_prompt = raw_input("Choice: ")
-        fs_type = fs_list[int(fs_prompt)-1]
+        fs_type = fs_list[int(fs_prompt) - 1]
     luks_lvg.lvcreate(enc_size, "overlay", fs_type)
     luks_lvg.logical_volumes["overlay"].fs.format()
     return luks_lvg
+
 
 def unpackInitrd(base):
     base_path, base_flag = mount_partition(base)
@@ -214,13 +232,16 @@ def unpackInitrd(base):
             if subversion > max_subversion:
                 max_subversion = subversion
                 initrd_file = item
-    initrd_prompt = raw_input("Which initrd file do you use? [%s]" % initrd_file)
+    initrd_prompt = raw_input("Which initrd file do you use? [%s]" %
+                              initrd_file)
     if initrd_prompt != "":
         initrd_file = initrd_prompt
 
-    return initrd(os.path.join(boot_path,initrd_file), working_dir, base_path), base_path, base_flag
+    return mkInitrd(os.path.join(boot_path, initrd_file), working_dir,
+                    base_path), base_path, base_flag
 
-def duress(lvg, base, initrd, password=False):
+
+def duress(vg, base, initrd, password=False):
     fallback_dir = os.path.dirname(initrd.path)
     fallback_file = os.path.basename(initrd.path)
     fallback_initrd = fallback_file[:18]
@@ -228,7 +249,9 @@ def duress(lvg, base, initrd, password=False):
     for item in fallback_file[18:].split('-')[1:]:
         fallback_initrd += "-%s" % item
     if not password:
-        print "Type in your duress password. Remember this password, but beware: authenticating with this password will destroy all of your data."
+        print "Type in your duress password. Remember this password, but " \
+            "beware: authenticating with this password will destroy all of " \
+            "your data."
         while True:
             duress_prompt = getpass()
             if duress_prompt != getpass("Verify: "):
@@ -239,11 +262,15 @@ def duress(lvg, base, initrd, password=False):
     else:
         duress_prompt = password
         permname = "access.nc"
-    initrd.createDuress(lvg,base, duress_prompt, os.path.basename(initrd.path),fallback_initrd, permname)
+    initrd.createDuress(vg, base, duress_prompt,
+                        os.path.basename(initrd.path), fallback_initrd,
+                        permname)
     return os.path.join(fallback_dir, fallback_initrd)
 
+
 def guest(initrd):
-    print "Do you want a guest login? This will be a password that will boot the system, hiding sensitive data, and prohibiting changes."
+    print "Do you want a guest login? This will be a password that will " \
+        "boot the system, hiding sensitive data, and prohibiting changes."
     print "Enter a password, or leave blank for no guest login."
     guest_pass = getpass()
     if guest_pass != "":
@@ -285,15 +312,17 @@ if __name__ == "__main__":
 # Create Logical Volume: Root
 # Format Logical Volume Root
     print "MAIN: Create Logical Volume..."
-    lvg = createLogicalVolumes(encrypted_part)
+    vg = createLogicalVolumes(encrypted_part)
 
 # Unpack initrd
     print "MAIN: Unpack initrd..."
     initrd, base_path, base_flag = unpackInitrd(our_part)
 
-    fallback_initrd = duress(lvg, our_part, initrd)
+    fallback_initrd = duress(vg, our_part, initrd)
 
-    initrd.installer.install_tedd(our_part, lvg.logical_volumes["overlay"], lvg.logical_volumes["swap"], encrypted_part, fallback_initrd)
+    initrd.installer.install_tedd(our_part, vg.logical_volumes["overlay"],
+                                  vg.logical_volumes["swap"], encrypted_part,
+                                  fallback_initrd)
 
 # Create duress script
 
@@ -303,6 +332,6 @@ if __name__ == "__main__":
 # Package initrd
     initrd.packageInitrd()
 # Create duress script
-    duress(lvg, our_part, initrd, encrypted_part.password)
+    duress(vg, our_part, initrd, encrypted_part.password)
 # Package fallback initrd
     initrd.packageInitrd(fallback_initrd)

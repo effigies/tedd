@@ -1,5 +1,6 @@
 from debug import debugPrint, for_real
-import os
+from subprocess import Popen, call, PIPE
+
 
 class luksVolume:
     def __init__(self, device, password, mapper_name):
@@ -10,18 +11,26 @@ class luksVolume:
 
     def luksFormat(self):
         if for_real:
-            os.system("echo -n %s | cryptsetup luksFormat -q %s " % (self.password, self.device.path))
+            cryptsetup = Popen(['cryptsetup', 'luksFormat', '-q',
+                                self.device.path], stdin=PIPE)
+            cryptsetup.stdin.write(self.password)
+            cryptsetup.stdin.close()
+            cryptsetup.wait()
         else:
             debugPrint("Creating a luks partition")
 
     def luksOpen(self):
         if for_real:
-            os.system("echo -n %s | cryptsetup luksOpen %s %s" % (self.password, self.device.path, self.mapper_name))
+            cryptsetup = Popen(['cryptsetup', 'luksOpen', self.device.path,
+                                self.mapper_name], stdin=PIPE)
+            cryptsetup.stdin.write(self.password)
+            cryptsetup.stdin.close()
+            cryptsetup.wait()
         else:
             debugPrint("Creating luks device")
 
     def luksClose(self):
         if for_real:
-            os.system("cryptsetup luksClose %s" % (mapper_name))
+            call(['cryptsetup', 'luksClose', self.mapper_name])
         else:
             debugPrint("Closing luks partition")

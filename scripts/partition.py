@@ -1,6 +1,11 @@
 from debug import debugPrint, for_real
 from filesystems import ext, reiser, xfs, jfs, swap
-import os, math, subprocess, time, sys
+import tempfile
+import os
+import math
+import time
+import sys
+from subprocess import Popen, call, PIPE
 
 fsMap = {'ext2':     ext,
          'ext3':     ext,
@@ -9,6 +14,7 @@ fsMap = {'ext2':     ext,
          'xfs':      xfs,
          'jfs':      jfs,
          'swap':     swap}
+
 
 class partition:
     # Get the partition path, disk, number and size
@@ -21,7 +27,8 @@ class partition:
         self.number = int(self.path[len(self.disk.path):])
         self.linux_verified = None
         print "parted %s print" % self.disk.path
-        proc = subprocess.Popen("parted %s print" % self.disk.path, shell=True,stdout=subprocess.PIPE, stdin=None)
+        proc = Popen(['parted', self.disk.path, 'print'], shell=True,
+                     stdout=PIPE)
         x = proc.wait()
         part_file = proc.stdout
         part_info = part_file.readlines()
@@ -60,15 +67,15 @@ class partition:
                 else:
                     self.type = None
                 self.fs = self.fileSystem()
-                
-                #if self.type in fsMap:
-                #    verifyLinux(self)
+
+                if self.type in fsMap:
+                    self.verifyLinux()
         else:
             self.size = 0
             self.type = None
 
     def __repr__(self):
-	return "<Part: %s>" % self.path
+        return "<Part: %s>" % self.path
 
     # Get the file-system specific object
     def fileSystem(self):
@@ -77,7 +84,7 @@ class partition:
             return fs(self)
         else:
             return None
-   
+
     # Resize the file system, then the partition, then the file system
     def resize(self):
         new_size = int(math.ceil((self.size - self.fs.free_space)*1.1))
@@ -88,17 +95,28 @@ class partition:
         debugPrint(new_size)
         self.fs.shrink(new_size)
         self.getSectors()
-        # new_end_sectors = int(self.start_sector + math.ceil(self.num_sectors * percent))
+        # new_end_sectors = int(self.start_sector + math.ceil(self.num_sectors
+        #                                                     * percent))
         debugPrint(percent)
         if for_real:
             # This is ugly, but I haven't found a better way to do this
-            # Using fdisk -u, it deletes the specified partition, creates a new, primary partition
-            # at the same partition number and the same start sector. The new end sector is chosen
-            # to make the total partition size slightly larger than the filesystem on board.
-            # Then, a new primary partition is created in the empty space following the partition
-            # that we just created. Changes are written.
-            debugPrint("fdisk -u %s << EOF\nd\n%s\nn\np\n%s\n%s\n+%sK\nw" % (self.disk.path, self.number,self.number,self.start_sector, int(math.ceil(new_size/1024.0))))
-            os.system("fdisk -u %s << EOF\nd\n%s\nn\np\n%s\n%s\n+%sK\nw" % (self.disk.path, self.number,self.number,self.start_sector, int(math.ceil(new_size/1024.0))))
+            # Using fdisk -u, it deletes the specified partition, creates a
+            # new, primary partition at the same partition number and the same
+            # start sector. The new end sector is chosen to make the total
+            # partition size slightly larger than the filesystem on board.
+            #
+            # Then, a new primary partition is created in the empty space
+            # following the partition that we just created. Changes are
+            # written.
+            debugPrint("fdisk -u %s << EOF\nd\n%s\nn\np\n%s\n%s\n+%sK\nw" %
+                       (self.disk.path, self.number, self.number,
+                        self.start_sector, int(math.ceil(new_size / 1024.0))))
+            fdisk = Popen(['fdisk', '-u', self.disk.path], stdin=PIPE)
+            fdisk.stdin.write('d\n{:d}\nn\np\n{:d}\n{:d}\n+{:d}K\nw'.format(
+                self.number, self.number, self.start_sector,
+                int(math.ceil(new_size / 1024.0))))
+            fdisk.stdin.close()
+            fdisk.wait()
         self.fs.fillPartition()
 
     # Get the number of sectors used by a partition
@@ -111,50 +129,50 @@ class partition:
                 if line.split()[1] == '*':
                     star_offset = 1
                 self.start_sector = int(line.split()[1+star_offset])
-                self.end_sector = int(line.split()[2+star_offset])    
+                self.end_sector = int(line.split()[2+star_offset])
                 self.num_sectors = self.end_sector - self.start_sector
         part_file.close()
 
-# Determine whether or not Linux is installed on this partition
-def verifyLinux(part,cwd=os.getcwd()):
-    path, flag = mount_partition(part)
-    distrodir = os.path.join(cwd,"scripts","distros")
-    if distrodir not in sys.path:
-        sys.path.append(distrodir)
-    for item in os.listdir(os.path.join(cwd,"scripts","distros")):
-        if item.endswith(".py"):
-            module = __import__(item[:-3])
-            if module.predicate(path):
-                self.linux_verified = module
-                unmount_partition(path, flag)
-                return True
-    unmount_partition(path, flag)
-    return False
+    # Determine whether or not Linux is installed on this partition
+    def verifyLinux(self, cwd=os.getcwd()):
+        path, flag = mount_partition(self)
+        distrodir = os.path.join(cwd, "scripts", "distros")
+        if distrodir not in sys.path:
+            sys.path.append(distrodir)
+        for item in os.listdir(os.path.join(cwd, "scripts", "distros")):
+            if item.endswith(".py"):
+                module = __import__(item[:-3])
+                if module.predicate(path):
+                    self.linux_verified = module
+                    unmount_partition(path, flag)
+                    return True
+        unmount_partition(path, flag)
+        return False
+
 
 def mount_partition(part):
-    f = open('/proc/mounts')
-    mounts = [mount.split() for mount in f if mount]
-    f.close()
+    with open('/proc/mounts') as f:
+        mounts = [mount.split() for mount in f if mount]
 
     existing = [mount for mount in mounts if mount[0] == part.path]
     if existing:
         return existing[0][1], False
 
-    mountpoint = mkdtemp()
-    if os.system("mount -t %s -o ro %s %s" %
-                (part.fileSystem.type, part.path, mountpoint)
-                ) == 0:
+    mountpoint = tempfile.mkdtemp()
+    if call(['mount', '-t', part.fileSystem.type, '-o', 'ro', part.path,
+             mountpoint]) == 0:
         return mountpoint, True
     return None
+
 
 def unmount_partition(mountpoint, flag):
     if flag:
         time.sleep(1)
-        if not os.system("umount %s" % mountpoint):
+        if call(['umount', mountpoint]) == 0:
             os.rmdir(mountpoint)
         else:
             time.sleep(2)
-            if not os.system("umount %s" % mountpoint):
+            if call(['umount', mountpoint]) == 0:
                 os.rmdir(mountpoint)
             else:
                 debugPrint("WARNING: Could not unmount %s" % mountpoint)

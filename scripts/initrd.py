@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-import os, shutil, tarfile
+import os
+import shutil
+import tarfile
 
 duress_script_template = """#!/bin/sh
 
@@ -58,58 +60,73 @@ rm -rf /boot
 vgchange -a n {volgroupname}
 cryptsetup luksClose $crypttarget"""
 
+
 class initrd:
     def __init__(self, path, working_dir, base_dir, cwd=os.getcwd()):
         self.install_mod = None
         boot_dir = os.path.dirname(path)
-        for item in os.listdir(os.path.join(cwd,"scripts","distros")):
+        for item in os.listdir(os.path.join(cwd, "scripts", "distros")):
             if item.endswith(".py"):
-                module = __import__(os.path.join("distros",item[:-3]))
+                module = __import__(os.path.join("distros", item[:-3]))
                 if module.predicate(base_dir):
                     self.install_mod = module
                     break
-        assert self.install_mod != None, "No matching distributions."
-        self.path,self.working_dir,initrd_dir = map(os.path.realpath,
-            (path,working_dir,initrd_dir))
-#        self.path = os.path.realpath(path)
-#        self.working_dir = os.path.realpath(working_dir)
+        assert self.install_mod is not None, "No matching distributions."
+        self.path = os.path.realpath(path)
+        self.working_dir = os.path.realpath(working_dir)
         os.mkdir(self.working_dir)
-#        initrd_dir = os.path.realpath(os.path.join(self.working_dir, "initrd"))
+
+        initrd_dir = os.path.realpath(os.path.join(self.working_dir, "initrd"))
         os.mkdir(initrd_dir)
-        os.system('cd "%s" ; zcat "%s" | cpio -i -H newc' % (initrd_dir, self.path))
-        util_archive = tarfile.open(os.path.join(cwd, "tedd-utils.tar.gz"), "r:gz")
+        os.system('cd "%s" ; zcat "%s" | cpio -i -H newc' % (initrd_dir,
+                                                             self.path))
+        util_archive = tarfile.open(os.path.join(cwd, "tedd-utils.tar.gz"),
+                                    "r:gz")
         util_archive.extractall(os.path.join(initrd_dir, "bin"))
         util_archive.close()
-        self.installer = self.install_mod.installer(initrd_dir, working_dir, base_dir, boot_dir, path)
+        self.installer = self.install_mod.installer(initrd_dir, working_dir,
+                                                    base_dir, boot_dir, path)
 
-    def createDuress(self, lvg, base, password, this_initrd, second_initrd, permname):
-        duress_script = open(os.path.join(self.working_dir, "initrd","scripts","duress"), "w")
+    def createDuress(self, lvg, base, password, this_initrd, second_initrd,
+                     permname):
+
         script_text = duress_script_template.format(
             volgroupname=lvg.group_name,
             swapsize=lvg.logical_volumes["swap"].size / (2 ** 20),
             swappath=lvg.logical_volumes["swap"].path,
             overlay=lvg.logical_volumes["overlay"],
             base=base, second_initrd=second_initrd)
-        duress_script.write(script_text)
-        duress_script.close()
-        if os.path.exists(os.path.join(self.working_dir, "initrd","scripts","duress.nc")):
-            os.remove(os.path.join(self.working_dir, "initrd","scripts","duress.nc"))
-        os.system('cd "%s" && mcrypt -q -u -k "%s" -a blowfish duress' % (os.path.join(self.working_dir, "initrd","scripts"),password))
-        shutil.copy(os.path.join(self.working_dir, "initrd", "scripts", "duress.nc"), os.path.join(os.path.dirname(self.path), permname))
+
+        script_dir = os.path.join(self.working_dir, "initrd", "scripts")
+        with open(os.path.join(script_dir, 'duress'), 'w') as duress_script:
+            duress_script.write(script_text)
+
+        encrypted = os.path.join(script_dir, 'duress.nc')
+        if os.path.exists(encrypted):
+            os.remove(encrypted)
+
+        call(['mcrypt', '-q', '-u', '-k', password, '-a', 'blowfish',
+              'duress'], cwd=script_dir)
+        shutil.copy(encrypted, os.path.join(os.path.dirname(self.path),
+                                            permname))
 
     def guestPass(self, password):
-        guest_nc = open(os.path.join(self.working_dir, "initrd", "scripts", "clean"), "w")
-        guest_nc.write("Hello world.")
-        guest_nc.close()
-        os.system('cd "%s" && mcrypt -q -u -k "%s" -a blowfish clean' % (os.path.join(self.working_dir, "initrd","scripts"),password))
-        shutil.copy(os.path.join(self.working_dir, "initrd", "scripts", "clean.nc"), os.path.join(os.path.dirname(self.path), "clean.nc"))
+        script_dir = os.path.join(self.working_dir, "initrd", "scripts")
+        with open(os.path.join(script_dir, "clean"), "w") as guest_nc:
+            guest_nc.write("Hello world.")
+        call(['mcrypt', '-q', '-u', '-k', password, '-a', 'blowfish',
+              'clean'], cwd=script_dir)
+        shutil.copy(os.path.join(script_dir, "clean.nc"),
+                    os.path.join(os.path.dirname(self.path), "clean.nc"))
 
     def packageInitrd(self, dest_name=False):
+        initrd_dir = os.path.join(self.working_dir, "initrd")
         if not dest_name:
             dest_name = os.path.realpath(self.path)
         if os.path.exists(dest_name):
             os.rename(dest_name, "%s.bak" % dest_name)
-        os.system('cd "%s" && find . -print | cpio -o -H newc > "%s.tmp"' % (os.path.join(self.working_dir,"initrd"), dest_name))
-        os.system('cd "%s" && gzip --best "%s.tmp" -c > "%s" ' % (os.path.join(self.working_dir,"initrd"), dest_name, dest_name))
+        os.system('cd "%s" && find . -print | cpio -o -H newc > "%s.tmp"' %
+                  (initrd_dir, dest_name))
+        os.system('cd "%s" && gzip --best "%s.tmp" -c > "%s"' %
+                  (initrd_dir, dest_name, dest_name))
         os.remove("%s.tmp" % dest_name)
-

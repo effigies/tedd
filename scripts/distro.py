@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
-import os, shutil
+import os
+import shutil
 from debug import debugPrint
+from subprocess import Popen, call, PIPE
+
 
 class distro:
     def __init__(self, base, boot, working_dir):
@@ -11,75 +14,76 @@ class distro:
 
     # Source comes from base, destination goes to working_dir
     def copy_file(self, source, destination=None, base_dest=False):
+        src = os.path.join(self.base, source)
+
         if not destination:
             destination = source
+
         if not base_dest:
-            try:
-                shutil.copy(os.path.join(self.base, source), os.path.join(self.workingdir, "initrd", destination))
-            except IOError:
-                debugPrint("Error copying %s to %s" % (os.path.join(self.base, source), os.path.join(self.workingdir, "initrd", destination)))
+            dst = os.path.join(self.workingdir, "initrd", destination)
         else:
-            try:
-                shutil.copy(os.path.join(self.base, source), os.path.join(self.base, destination))
-            except IOError:
-                debugPrint("Error copying %s to %s" % (os.path.join(self.base, source), os.path.join(self.base, destination)))
+            dst = os.path.join(self.base, destination)
+
+        try:
+            shutil.copy(src, dst)
+        except IOError:
+            debugPrint("Error copying {} to {}".format(src, dst))
 
     def copy_tree(self, source, destination=None):
         if not destination:
             destination = source
+
+        dst = os.path.join(self.workingdir, "initrd", destination)
         try:
-            shutil.copytree(os.path.join(self.base, source), os.path.join(self.workingdir, "initrd", destination))
+            shutil.copytree(os.path.join(self.base, source), dst)
         except OSError, exc:
             if exc[0] == 2:
                 raise
             elif exc[0] == 17:
-                debugPrint("File %s already exists" % (os.path.join(self.workingdir, "initrd", destination)))
+                debugPrint("File {} already exists".format(dst))
 
     def patch_file(self, patch):
         # Apply Patches
-        patchfile = open(os.path.join(self.workingdir, "file.patch"), "w")
-        patchfile.write(patch)
-        patchfile.close()
-        os.system("cd %s && patch -p0 < file.patch" % self.workingdir)
-#        os.remove(os.path.join(self.workingdir, "file.patch"))
+        pipe = Popen(['patch', '-p0'], stdin=PIPE, cwd=self.workingdir)
+        pipe.stdin.write(patch)
+        pipe.stdin.close()
+        pipe.wait()
 
     def new_directory(self, dirname, base=False):
         if base:
             b = self.base
         else:
-            b = os.path.join(self.workingdir,"initrd")
-        try:
+            b = os.path.join(self.workingdir, "initrd")
+
+        path = os.path.join(b, dirname)
+
+        if not os.path.isdir(path):
             os.mkdir(os.path.join(b, dirname))
-        except OSError:
-            #Already exists
-            pass
 
     def write_file(self, filename, content, append=False, base=False):
-        def appendChar(app):
-            if app:
-                return "a"
-            else:
-                return "w"
         if base:
-            newfile = open(os.path.join(self.base, filename), appendChar(append))
+            fname = os.path.join(self.base, filename)
         else:
-            newfile = open(os.path.join(self.workingdir, "initrd", filename), appendChar(append))
-        newfile.write(content)
-        newfile.close()
+            fname = os.path.join(self.workingdir, "initrd", filename)
+
+        with open(fname, 'a' if append else 'w') as newfile:
+            newfile.write(content)
 
     def prep_chroot(self):
-        os.system("mount --bind /proc %s/proc" % self.base)
-        os.system("mount --bind /dev %s/dev" % self.base)
-        os.system("mount --bind %s %s/boot" % (self.boot, self.base))
-        os.rename(os.path.join(self.base, "etc", "resolv.conf"),os.path.join(self.base, "etc", "resolv.conf.bak-tedd"))
-        shutil.copy(os.path.join("/etc", "resolv.conf"), os.path.join(self.base, "etc", "resolv.conf"))
+        call(['mount', '--bind', '/proc', os.path.join(self.base, 'proc')])
+        call(['mount', '--bind', '/dev', os.path.join(self.base, 'dev')])
+        call(['mount', '--bind', self.boot, os.path.join(self.base, 'boot')])
+        os.rename(os.path.join(self.base, "etc", "resolv.conf"),
+                  os.path.join(self.base, "etc", "resolv.conf.bak-tedd"))
+        shutil.copy(os.path.join("/etc", "resolv.conf"),
+                    os.path.join(self.base, "etc", "resolv.conf"))
 
     def run_chroot(self, action):
-        os.system("chroot %s %s" % (self.base, action))
+        call(['chroot', self.base, action])
 
     def close_chroot(self):
-        os.system("umount %s/proc" % self.base)
-        os.system("umount %s/dev" % self.base)
-        os.system("umount %s/boot" % self.base)
-        os.rename(os.path.join(self.base, "etc", "resolv.conf.bak-tedd"),os.path.join(self.base, "etc", "resolv.conf"))
-
+        call(['umount', os.path.join(self.base, 'proc')])
+        call(['umount', os.path.join(self.base, 'dev')])
+        call(['umount', os.path.join(self.base, 'boot')])
+        os.rename(os.path.join(self.base, "etc", "resolv.conf.bak-tedd"),
+                  os.path.join(self.base, "etc", "resolv.conf"))

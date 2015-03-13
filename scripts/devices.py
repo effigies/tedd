@@ -1,10 +1,9 @@
 from debug import debugPrint, for_real
-from disk import disk
+from subprocess import call
 
-import os
 
 def urandom(device):
-        if for_real:
-            os.system("dd if=/dev/urandom of=%s" % device.path)
-        else:
-            debugPrint("Filling %s with random data"% device.path)
+    if for_real:
+        call(['dd', 'if=/dev/urandom', 'of=' + device.path])
+    else:
+        debugPrint("Filling {} with random data".format(device.path))
